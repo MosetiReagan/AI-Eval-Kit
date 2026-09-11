@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EvalRunner, ResponseCache } from '@ai-eval/core';
+import { EvalRunner, ResponseCache, ProviderError, AuthenticationError } from '@ai-eval/core';
 import { exactMatchEvaluator, containsEvaluator } from '@ai-eval/evaluators';
 import { MockProvider } from '@ai-eval/providers';
 import fs from 'node:fs';
@@ -61,5 +61,32 @@ describe('EvalRunner & Caching', () => {
     expect(cache.get(key)).toBeNull();
 
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+  it('does not retry non-retryable ProviderError or AuthenticationError', async () => {
+    const runner = new EvalRunner();
+    let callCount = 0;
+    const target = {
+      name: 'fail-target',
+      async run() {
+        callCount++;
+        throw new AuthenticationError('Bad API Key');
+      },
+    };
+
+    const dataset = {
+      name: 'fail-ds',
+      cases: [{ id: 'c1', input: 'test' }],
+    };
+
+    await runner.run({
+      projectName: 'test',
+      evaluationName: 'test',
+      target,
+      dataset,
+      evaluators: [],
+      runnerOptions: { retries: 3 },
+    });
+
+    expect(callCount).toBe(1); // Should not retry auth errors
   });
 });

@@ -16,7 +16,7 @@ import {
 import { calculateLatencyStats } from './stats.js';
 import { PricingRegistry } from './pricing.js';
 import { ResponseCache } from './cache.js';
-import { TimeoutError, ProviderError } from './errors.js';
+import { TimeoutError, ProviderError, AuthenticationError, InvalidOutputError, InvalidDatasetError } from './errors.js';
 
 export interface EvaluatorInstance {
   definition: EvaluatorDefinition;
@@ -75,6 +75,16 @@ export class EvalRunner {
         return await fn();
       } catch (err: unknown) {
         attempt++;
+        // Do not retry non-retryable errors
+        if (err instanceof ProviderError && !err.isRetryable) {
+          throw err;
+        }
+        if (err instanceof AuthenticationError) {
+          throw err;
+        }
+        if (err instanceof InvalidOutputError || err instanceof InvalidDatasetError) {
+          throw err;
+        }
         if (attempt > retries) {
           throw err;
         }
