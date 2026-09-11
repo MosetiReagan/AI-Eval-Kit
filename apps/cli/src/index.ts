@@ -583,14 +583,39 @@ export default {
       console.log(pc.dim('----------------------------------------------------------------------'));
 
       for (const m of modelNames) {
-        const mockProv = new MockProvider({
-          model: m,
-          defaultLatencyMs: m.includes('mock') ? 15 : m.includes('claude') ? 45 : 35,
-        });
+        let provider: any;
+        // Check registered providers
+        for (const p of defaultProviderRegistry.list()) {
+          if (p.model === m || p.name === m) {
+            provider = p;
+            break;
+          }
+        }
+        // Check configured providers in ai-eval.yaml
+        if (!provider && config.providers) {
+          for (const [name, cfg] of Object.entries(config.providers)) {
+            if (cfg.model === m || name === m) {
+              provider = defaultProviderRegistry.createFromConfig(name, cfg);
+              break;
+            }
+          }
+        }
+        if (!provider) {
+          if (m.includes('mock')) {
+            provider = new MockProvider({ model: m, defaultLatencyMs: 15 });
+          } else {
+            console.log(pc.yellow(`  ⚠ Provider for "${m}" not configured in ai-eval.yaml. Using mock benchmark adapter.`));
+            provider = new MockProvider({
+              model: m,
+              defaultLatencyMs: m.includes('claude') ? 45 : 35,
+            });
+          }
+        }
 
-        const target = defineTarget(m, async (input) => {
-          const resp = await mockProv.chat([{ role: 'user', content: input.message ?? '' }]);
-          return { output: resp.output, tokenUsage: resp.tokenUsage, latencyMs: resp.latencyMs };
+        const target = defineTarget(`${provider.name}:${m}`, async (input) => {
+          const messages = input.messages ?? [{ role: 'user', content: input.message ?? '' }];
+          const resp = await provider.chat(messages);
+          return { output: resp.output, tool_calls: resp.toolCalls, tokenUsage: resp.tokenUsage, latencyMs: resp.latencyMs };
         });
 
         const res = await evaluate({
@@ -598,7 +623,7 @@ export default {
           dataset,
           evaluators: evSpec.evaluators,
           modelName: m,
-          provider: mockProv,
+          provider,
           cwd,
         });
 
