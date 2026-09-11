@@ -260,13 +260,14 @@ export class EvalRunner {
     const caseResults: TestCaseResult[] = [];
     let completedCount = 0;
 
-    // Queue worker pool
+    // Queue worker pool with shared abort flag
     let currentIndex = 0;
+    let aborted = false;
     const workers = Array.from({ length: Math.min(concurrency, cases.length) }, async () => {
-      while (currentIndex < cases.length) {
+      while (currentIndex < cases.length && !aborted) {
         const index = currentIndex++;
         const testCase = cases[index];
-        if (!testCase) break;
+        if (!testCase || aborted) break;
 
         const result = await this.runTestCase(testCase, options.target, options.evaluators, {
           runnerOptions: options.runnerOptions,
@@ -281,6 +282,7 @@ export class EvalRunner {
         options.onProgress?.(completedCount, cases.length, result);
 
         if (options.runnerOptions?.stopOnFailure && !result.passed) {
+          aborted = true;
           break;
         }
       }
@@ -346,6 +348,8 @@ export class EvalRunner {
       },
       totalCost: Number(totalCost.toFixed(6)),
       cases: finalCases,
+      skippedCases: cases.length - finalCases.length,
+      stopReason: aborted ? 'failure' : 'completed',
     };
   }
 }

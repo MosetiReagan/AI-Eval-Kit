@@ -179,6 +179,8 @@ export interface EvaluationRun {
   totalTokens: TokenUsage;
   totalCost: number;
   cases: TestCaseResult[];
+  skippedCases?: number;
+  stopReason?: 'failure' | 'completed';
   metadata?: Record<string, unknown>;
 }
 

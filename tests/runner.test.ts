@@ -89,4 +89,36 @@ describe('EvalRunner & Caching', () => {
 
     expect(callCount).toBe(1); // Should not retry auth errors
   });
+  it('halts all concurrent workers when stopOnFailure is true', async () => {
+    const runner = new EvalRunner();
+    let runsCount = 0;
+    const target = {
+      name: 'stop-target',
+      async run() {
+        runsCount++;
+        return { output: runsCount === 1 ? 'wrong' : 'correct' };
+      },
+    };
+
+    const dataset = {
+      name: 'stop-ds',
+      cases: Array.from({ length: 10 }, (_, i) => ({
+        id: `c${i + 1}`,
+        input: `test ${i + 1}`,
+        expected: { exact: 'correct' },
+      })),
+    };
+
+    const run = await runner.run({
+      projectName: 'test',
+      evaluationName: 'test',
+      target,
+      dataset,
+      evaluators: [{ definition: exactMatchEvaluator, weight: 1 }],
+      runnerOptions: { concurrency: 4, stopOnFailure: true },
+    });
+
+    expect(run.stopReason).toBe('failure');
+    expect(run.skippedCases).toBeGreaterThan(0);
+  });
 });
