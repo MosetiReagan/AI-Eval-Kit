@@ -50,56 +50,52 @@ Respond ONLY with valid JSON with the following structure:
   }
 }`;
 
-    if (ctx.provider && typeof ctx.provider.chat === 'function') {
-      try {
-        const judgeResponse = await ctx.provider.chat([
-          { role: 'system', content: 'You are an objective AI evaluation judge. Always respond with strict JSON.' },
-          { role: 'user', content: judgePrompt },
-        ]);
+    if (!ctx.provider || typeof ctx.provider.chat !== 'function') {
+      return {
+        score: 0,
+        passed: false,
+        reason: 'LLM judge requires a configured provider with chat capability. No provider supplied.',
+        metadata: { skipped: true, error: 'NO_PROVIDER' },
+      };
+    }
 
-        const extracted = extractJsonFromText(judgeResponse.output);
-        if (extracted.success && extracted.data && typeof extracted.data === 'object') {
-          const data = extracted.data as Record<string, unknown>;
-          const rawScore = Number(data.score ?? 0);
-          const normalizedScore = scale === '1-5' ? rawScore / 5 : rawScore;
-          const passed = Boolean(data.passed ?? (rawScore >= threshold));
+    try {
+      const judgeResponse = await ctx.provider.chat([
+        { role: 'system', content: 'You are an objective AI evaluation judge. Always respond with strict JSON.' },
+        { role: 'user', content: judgePrompt },
+      ]);
 
-          return {
-            score: Math.max(0, Math.min(1, Number(normalizedScore.toFixed(4)))),
-            passed,
-            reason: String(data.reason ?? 'Scored by LLM judge'),
-            metrics: (data.criteriaScores as Record<string, number>) ?? undefined,
-            metadata: { rawScore, scale, judgeOutput: judgeResponse.output },
-          };
-        }
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
+      const extracted = extractJsonFromText(judgeResponse.output);
+      if (extracted.success && extracted.data && typeof extracted.data === 'object') {
+        const data = extracted.data as Record<string, unknown>;
+        const rawScore = Number(data.score ?? 0);
+        const normalizedScore = scale === '1-5' ? rawScore / 5 : rawScore;
+        const passed = Boolean(data.passed ?? (rawScore >= threshold));
+
         return {
-          score: 0,
-          passed: false,
-          reason: `LLM Judge execution error: ${msg}`,
-          error: msg,
+          score: Math.max(0, Math.min(1, Number(normalizedScore.toFixed(4)))),
+          passed,
+          reason: String(data.reason ?? 'Scored by LLM judge'),
+          metrics: (data.criteriaScores as Record<string, number>) ?? undefined,
+          metadata: { rawScore, scale, judgeOutput: judgeResponse.output },
         };
       }
-    }
 
-    // Heuristic offline fallback when no provider is supplied
-    const actualLower = actualStr.toLowerCase();
-    let matchedCriteria = 0;
-    for (const c of criteria) {
-      if (actualLower.length > 5 || c.length > 0) {
-        matchedCriteria++;
-      }
+      return {
+        score: 0,
+        passed: false,
+        reason: 'LLM judge returned malformed or unparseable JSON output',
+        metadata: { judgeOutput: judgeResponse.output },
+      };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return {
+        score: 0,
+        passed: false,
+        reason: `LLM Judge execution error: ${msg}`,
+        error: msg,
+      };
     }
-    const ratio = criteria.length > 0 ? matchedCriteria / criteria.length : 1;
-    const passed = ratio >= 0.7;
-
-    return {
-      score: Number(ratio.toFixed(4)),
-      passed,
-      reason: `Offline heuristic evaluation (${matchedCriteria}/${criteria.length} criteria met)`,
-      metadata: { offline: true },
-    };
   },
 });
 
@@ -144,7 +140,7 @@ export const criteriaEvaluator = defineEvaluator({
           failedCriteria.push(crit);
         }
       } else {
-        passedCriteria.push(crit);
+        failedCriteria.push(crit);
       }
     }
 
