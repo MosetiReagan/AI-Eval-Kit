@@ -366,6 +366,65 @@ jobs:
 
 ---
 
+## Evaluation Run Diffs
+
+Compare two evaluation runs or compare a run against your established baseline:
+
+```bash
+# Compare two specific runs
+ai-eval diff run_1726050100_a1b2 run_1726050500_c3d4
+
+# Compare latest run against baseline
+ai-eval diff baseline latest
+
+# Output as markdown or JSON
+ai-eval diff baseline latest --format markdown --output reports/diff.md
+```
+
+Terminal output highlights score changes, evaluator deltas, test case improvements (🟢), and regressions (🔻):
+
+```text
+Evaluation Run Diff:
+  Run 1 (Before): base-001 (9/11/2026)
+  Run 2 (After):  run_1726050500 (9/11/2026)
+
+Metric               Run 1          Run 2          Delta
+------------------------------------------------------------
+Overall Score        95.0%          98.0%          +3.0%
+Pass Rate            90.0%          100.0%         +10.0%
+Avg Latency          140ms          110ms          -30ms
+Total Cost           $0.0020        $0.0018        -$0.0002
+
+Evaluator Breakdown:
+  exact_match        92.0%        ➔ 96.0%          +4.0%
+  contains           98.0%        ➔ 100.0%         +2.0%
+
+🟢 Improvements (1 cases):
+  ✓ c2: was 0.0%, now 100.0% (PASSED)
+```
+
+---
+
+## CLI Command Reference
+
+| Command                  | Description                         | Key Options                                                                                                                                                            |
+| :----------------------- | :---------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ai-eval init [dir]`     | Initialize new evaluation project   | Scaffold example configs & dataset                                                                                                                                     |
+| `ai-eval test [eval]`    | Run evaluations                     | `--ci`, `--baseline`, `--update-baseline`, `--evaluator <name>`, `--tag <tag>`, `--case <id>`, `--concurrency <n>`, `--no-cache`, `--format <type>`, `--output <file>` |
+| `ai-eval validate`       | Validate configuration & datasets   | Checks schema, targets, evaluators                                                                                                                                     |
+| `ai-eval diff <r1> <r2>` | Compare two runs side-by-side       | `--format <terminal\|json\|markdown>`, `--output <file>`, `--ci`                                                                                                       |
+| `ai-eval baseline`       | View or establish baseline          | `show` (default), `set [runId]`, `clear`                                                                                                                               |
+| `ai-eval compare`        | Compare multiple models             | `--models <list>`, `--eval <name>`                                                                                                                                     |
+| `ai-eval report [runId]` | Generate standalone report          | `--format <html\|markdown\|json\|junit>`, `--output <file>`                                                                                                            |
+| `ai-eval history`        | Show execution history              | `clear`, `prune --keep <n>`, `--clear`, `--prune <n>`                                                                                                                  |
+| `ai-eval dataset`        | Manage evaluation datasets          | `list`, `validate <file>`, `sample <file> [n]`                                                                                                                         |
+| `ai-eval evaluator`      | Inspect evaluators                  | `list`, `inspect <name>`                                                                                                                                               |
+| `ai-eval provider`       | Test and inspect LLM providers      | `list`, `test <provider>`                                                                                                                                              |
+| `ai-eval doctor`         | Diagnose environment & dependencies | Validates Node, API keys, paths                                                                                                                                        |
+| `ai-eval dashboard`      | Launch local visual dashboard       | `--port <port>` (3000), `--host <host>` (127.0.0.1)                                                                                                                    |
+
+---
+
 ## Reporting
 
 Generate reports in multiple formats:
@@ -461,6 +520,12 @@ ai-eval-kit/
 ├── tests/               # Automated unit, integration, and e2e test suite
 └── .github/             # GitHub Actions CI workflow & issue templates
 ```
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for full release history and release notes.
 
 ---
 
