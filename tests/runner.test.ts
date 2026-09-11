@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EvalRunner, ResponseCache, ProviderError, AuthenticationError } from '@ai-eval/core';
+import { EvalRunner, ResponseCache, ProviderError, AuthenticationError, RateLimiter } from '@ai-eval/core';
 import { exactMatchEvaluator, containsEvaluator } from '@ai-eval/evaluators';
 import { MockProvider } from '@ai-eval/providers';
 import fs from 'node:fs';
@@ -120,5 +120,50 @@ describe('EvalRunner & Caching', () => {
 
     expect(run.stopReason).toBe('failure');
     expect(run.skippedCases).toBeGreaterThan(0);
+  });
+
+  it('RateLimiter throttles execution rate', async () => {
+    // 1200 per minute = 20 per second = 50ms interval
+    const limiter = new RateLimiter(1200, 1);
+    const start = Date.now();
+    await limiter.acquire();
+    await limiter.acquire();
+    await limiter.acquire();
+    const elapsed = Date.now() - start;
+    // With 1 initial token, the 2 subsequent acquires must wait at least ~80ms
+    expect(elapsed).toBeGreaterThanOrEqual(70);
+  });
+
+  it('enforces rateLimitPerMinute in EvalRunner.run', async () => {
+    const runner = new EvalRunner();
+    const timestamps: number[] = [];
+    const target = {
+      name: 'rate-limited-target',
+      async run() {
+        timestamps.push(Date.now());
+        return { output: 'ok' };
+      },
+    };
+
+    const dataset = {
+      name: 'rate-limit-ds',
+      cases: [
+        { id: 'c1', input: 'test1' },
+        { id: 'c2', input: 'test2' },
+      ],
+    };
+
+    // 1200 RPM = 50ms per token, initialTokens = 1 -> 2nd case waits ~50ms
+    await runner.run({
+      projectName: 'test',
+      evaluationName: 'test',
+      target,
+      dataset,
+      evaluators: [],
+      runnerOptions: { concurrency: 2, rateLimitPerMinute: 1200 },
+    });
+
+    expect(timestamps.length).toBe(2);
+    expect(timestamps[1]! - timestamps[0]!).toBeGreaterThanOrEqual(35);
   });
 });

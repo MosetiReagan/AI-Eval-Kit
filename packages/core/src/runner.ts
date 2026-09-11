@@ -24,6 +24,44 @@ export interface EvaluatorInstance {
   options?: Record<string, unknown>;
 }
 
+export class RateLimiter {
+  private tokens: number;
+  private readonly maxTokens: number;
+  private readonly refillRatePerMs: number;
+  private lastRefill: number;
+  private chain: Promise<void> = Promise.resolve();
+
+  constructor(limitPerMinute: number, initialTokens = 1) {
+    if (limitPerMinute <= 0) {
+      throw new Error('rateLimitPerMinute must be greater than 0');
+    }
+    this.maxTokens = limitPerMinute;
+    this.refillRatePerMs = limitPerMinute / 60000;
+    this.tokens = Math.min(limitPerMinute, initialTokens);
+    this.lastRefill = Date.now();
+  }
+
+  async acquire(): Promise<void> {
+    const next = this.chain.then(async () => {
+      const now = Date.now();
+      const elapsed = Math.max(0, now - this.lastRefill);
+      this.lastRefill = now;
+      this.tokens = Math.min(this.maxTokens, this.tokens + elapsed * this.refillRatePerMs);
+
+      if (this.tokens < 1) {
+        const waitMs = Math.max(1, Math.ceil((1 - this.tokens) / this.refillRatePerMs));
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        this.tokens = 0;
+        this.lastRefill = Date.now();
+      } else {
+        this.tokens -= 1;
+      }
+    });
+    this.chain = next.catch(() => {});
+    await next;
+  }
+}
+
 export interface RunExecutionOptions {
   projectName: string;
   evaluationName: string;
@@ -67,10 +105,14 @@ export class EvalRunner {
   private async executeWithRetries<T>(
     fn: () => Promise<T>,
     retries = 0,
-    retryDelayMs = 500
+    retryDelayMs = 500,
+    rateLimiter?: RateLimiter
   ): Promise<T> {
     let attempt = 0;
     while (true) {
+      if (rateLimiter) {
+        await rateLimiter.acquire();
+      }
       try {
         return await fn();
       } catch (err: unknown) {
@@ -112,6 +154,7 @@ export class EvalRunner {
       cache?: ResponseCache;
       modelName?: string;
       targetVersion?: string;
+      rateLimiter?: RateLimiter;
     }
   ): Promise<TestCaseResult> {
     const input = this.normalizeInput(testCase.input);
@@ -145,7 +188,8 @@ export class EvalRunner {
         output = await this.executeWithRetries(
           () => this.executeWithTimeout((signal) => target.run({ ...input, signal }), timeoutMs),
           retries,
-          retryDelayMs
+          retryDelayMs,
+          options.rateLimiter
         );
 
         if (options.cache && cacheKey) {
@@ -256,6 +300,9 @@ export class EvalRunner {
     const runId = `run_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
     const cases = options.dataset.cases;
     const concurrency = Math.max(1, options.runnerOptions?.concurrency ?? 5);
+    const rateLimiter = options.runnerOptions?.rateLimitPerMinute
+      ? new RateLimiter(options.runnerOptions.rateLimitPerMinute)
+      : undefined;
 
     const caseResults: TestCaseResult[] = [];
     let completedCount = 0;
@@ -275,6 +322,7 @@ export class EvalRunner {
           cache: options.cache,
           modelName: options.modelName,
           targetVersion: options.targetVersion,
+          rateLimiter,
         });
 
         caseResults[index] = result;
