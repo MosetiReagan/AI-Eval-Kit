@@ -45,4 +45,8 @@ describe('Providers System', () => {
     expect(defaultProviderRegistry.has('custom-mock')).toBe(true);
     expect(defaultProviderRegistry.get('custom-mock')?.name).toBe('custom-mock');
   });
+  it('throws InvalidOutputError when messages array is empty', async () => {
+    const mock = new MockProvider();
+    await expect(mock.chat([])).rejects.toThrow('messages array must not be empty');
+  });
 });

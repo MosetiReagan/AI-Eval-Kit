@@ -1,4 +1,4 @@
-import { ChatMessage, ProviderError, redactSecrets } from '@ai-eval/core';
+import { ChatMessage, ProviderError, redactSecrets , InvalidOutputError } from '@ai-eval/core';
 import { Provider, ProviderCallOptions, ProviderResponse } from './types.js';
 
 export interface OllamaOptions {
@@ -19,6 +19,9 @@ export class OllamaProvider implements Provider {
   }
 
   async chat(messages: ChatMessage[], options?: ProviderCallOptions): Promise<ProviderResponse> {
+    if (!messages || messages.length === 0) {
+      throw new InvalidOutputError(`${this.name}: messages array must not be empty`);
+    }
     const startTime = Date.now();
     const url = `${this.baseUrl}/api/chat`;
 

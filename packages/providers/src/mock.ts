@@ -1,4 +1,4 @@
-import { ChatMessage, ProviderError } from '@ai-eval/core';
+import { ChatMessage, ProviderError , InvalidOutputError } from '@ai-eval/core';
 import { Provider, ProviderCallOptions, ProviderResponse } from './types.js';
 
 export interface MockRule {
@@ -40,6 +40,9 @@ export class MockProvider implements Provider {
   }
 
   async chat(messages: ChatMessage[], options?: ProviderCallOptions): Promise<ProviderResponse> {
+    if (!messages || messages.length === 0) {
+      throw new InvalidOutputError(`${this.name}: messages array must not be empty`);
+    }
     const startTime = Date.now();
     const lastMessage = messages[messages.length - 1]?.content ?? '';
 
