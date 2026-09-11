@@ -180,41 +180,39 @@ export async function compareModels(options: {
   runnerOptions?: RunnerOptions;
   cwd?: string;
 }): Promise<Array<{ model: string; provider: string; run: EvaluationRun }>> {
-  const results: Array<{ model: string; provider: string; run: EvaluationRun }> = [];
+  return Promise.all(
+    options.models.map(async (item) => {
+      const target: EvalTarget = {
+        name: `${item.provider.name}:${item.model}`,
+        async run(input: EvalInput): Promise<EvalOutput> {
+          const messages = input.messages ?? [{ role: 'user', content: input.message ?? '' }];
+          const resp = await item.provider.chat(messages);
+          return {
+            output: resp.output,
+            tool_calls: resp.toolCalls,
+            latencyMs: resp.latencyMs,
+            tokenUsage: resp.tokenUsage,
+            raw: resp.raw,
+          };
+        },
+      };
 
-  for (const item of options.models) {
-    const target: EvalTarget = {
-      name: `${item.provider.name}:${item.model}`,
-      async run(input: EvalInput): Promise<EvalOutput> {
-        const messages = input.messages ?? [{ role: 'user', content: input.message ?? '' }];
-        const resp = await item.provider.chat(messages);
-        return {
-          output: resp.output,
-          tool_calls: resp.toolCalls,
-          latencyMs: resp.latencyMs,
-          tokenUsage: resp.tokenUsage,
-          raw: resp.raw,
-        };
-      },
-    };
+      const res = await evaluate({
+        target,
+        dataset: options.dataset,
+        evaluators: options.evaluators,
+        modelName: item.model,
+        provider: item.provider,
+        projectName: options.projectName ?? 'model-benchmark',
+        runnerOptions: options.runnerOptions,
+        cwd: options.cwd,
+      });
 
-    const res = await evaluate({
-      target,
-      dataset: options.dataset,
-      evaluators: options.evaluators,
-      modelName: item.model,
-      provider: item.provider,
-      projectName: options.projectName ?? 'model-benchmark',
-      runnerOptions: options.runnerOptions,
-      cwd: options.cwd,
-    });
-
-    results.push({
-      model: item.model,
-      provider: item.provider.name,
-      run: res.run,
-    });
-  }
-
-  return results;
+      return {
+        model: item.model,
+        provider: item.provider.name,
+        run: res.run,
+      };
+    })
+  );
 }
