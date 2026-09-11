@@ -353,6 +353,20 @@ export default {
         });
       }
 
+      // Evaluators filter
+      let evaluatorsToUse = evalSpec.evaluators;
+      if (options.evaluator) {
+        const filterName = options.evaluator.toLowerCase();
+        evaluatorsToUse = evalSpec.evaluators.filter((ev) => {
+          const name = typeof ev === 'string' ? ev : ev.name;
+          return name.toLowerCase() === filterName;
+        });
+        if (evaluatorsToUse.length === 0) {
+          console.error(pc.red(`\nNo evaluators matching "${options.evaluator}" found in evaluation "${evalSpec.name}".\n`));
+          process.exit(2);
+        }
+      }
+
       // Execute Evaluation
       const checkBaseline = options.baseline || isCi;
       const runnerOpts = {
@@ -365,7 +379,7 @@ export default {
         target,
         targetVersion,
         dataset,
-        evaluators: evalSpec.evaluators,
+        evaluators: evaluatorsToUse,
         projectName: config.project.name,
         evaluationName: evalSpec.name,
         runnerOptions: runnerOpts,
@@ -388,8 +402,25 @@ export default {
       if (options.updateBaseline) {
         baselineManager.saveBaseline(result.run);
         if (format === 'terminal') {
-          console.log(pc.green(`✓ Baseline updated with run ${result.run.id}`));
+          console.log(pc.green('  ✓ Updated baseline with this evaluation run'));
         }
+      }
+
+      // Format report
+      const outputText = reporter.format(result.run, result.regression);
+
+      if (options.output) {
+        const outPath = path.resolve(cwd, options.output);
+        const outDir = path.dirname(outPath);
+        if (!fs.existsSync(outDir)) {
+          fs.mkdirSync(outDir, { recursive: true });
+        }
+        fs.writeFileSync(outPath, outputText, 'utf8');
+        if (format === 'terminal') {
+          console.log(pc.green(`  ✓ Report saved to ${options.output}`));
+        }
+      } else {
+        console.log(outputText);
       }
 
       if (result.run.failedCases > 0) {
@@ -398,30 +429,10 @@ export default {
       if (result.regression?.hasRegression) {
         hasAnyRegressions = true;
       }
-
-      // Format output
-      const reportOutput = reporter.format(result.run, result.regression, {
-        verbose: options.verbose,
-        quiet: options.quiet,
-      });
-
-      if (options.output) {
-        const outPath = path.resolve(cwd, options.output);
-        fs.mkdirSync(path.dirname(outPath), { recursive: true });
-        fs.writeFileSync(outPath, reportOutput, 'utf8');
-        if (format === 'terminal') {
-          console.log(pc.green(`✓ Report written to ${options.output}`));
-        }
-      } else {
-        console.log(reportOutput);
-      }
     }
 
-    if (isCi) {
-      if (hasAnyRegressions || hasAnyFailures) {
-        process.exit(1);
-      }
-      process.exit(0);
+    if (isCi && (hasAnyFailures || hasAnyRegressions)) {
+      process.exit(1);
     }
   };
 
@@ -434,6 +445,7 @@ export default {
     .option('--output <file>', 'Write report output to specified file')
     .option('--baseline', 'Compare current run against baseline', false)
     .option('--update-baseline', 'Update stored baseline with this evaluation run', false)
+    .option('--evaluator <name>', 'Filter to run only the specified evaluator')
     .option('--tag <tag>', 'Filter dataset cases by tag')
     .option('--case <caseId>', 'Filter dataset by specific case ID')
     .option('--no-cache', 'Disable response caching')
@@ -641,6 +653,184 @@ export default {
         );
       }
       console.log('');
+    });
+
+  // ----------------------------------------------------
+  // ai-eval diff
+  // ----------------------------------------------------
+  program
+    .command('diff <run1> <run2>')
+    .description('Compare two evaluation runs and display regression/improvement diff')
+    .option('--format <type>', 'Output format: terminal, json, markdown', 'terminal')
+    .option('--output <file>', 'Write diff output to specified file')
+    .option('--ci', 'Exit with code 1 if any regression is detected')
+    .action(async (run1: string, run2: string, options: { format?: string; output?: string; ci?: boolean }) => {
+      const cwd = process.cwd();
+      const history = new HistoryManager(cwd);
+      const baselineManager = new BaselineManager(cwd);
+
+      const resolveRun = (id: string) => {
+        if (id === 'baseline') return baselineManager.getBaseline();
+        return history.getRun(id);
+      };
+
+      const r1 = resolveRun(run1);
+      if (!r1) {
+        console.error(pc.red(`\nRun "${run1}" not found in history or baseline.\n`));
+        process.exit(2);
+      }
+
+      const r2 = resolveRun(run2);
+      if (!r2) {
+        console.error(pc.red(`\nRun "${run2}" not found in history or baseline.\n`));
+        process.exit(2);
+      }
+
+      const scoreDelta = r2.overallScore - r1.overallScore;
+      const passRate1 = r1.totalCases > 0 ? r1.passedCases / r1.totalCases : 0;
+      const passRate2 = r2.totalCases > 0 ? r2.passedCases / r2.totalCases : 0;
+      const passRateDelta = passRate2 - passRate1;
+      const latDelta = r2.latencyStats.avgMs - r1.latencyStats.avgMs;
+      const costDelta = r2.totalCost - r1.totalCost;
+
+      // Map cases by id
+      const r1Cases = new Map(r1.cases.map((c) => [c.id, c]));
+      const regressions: Array<{ id: string; prevScore: number; currentScore: number; reason?: string }> = [];
+      const improvements: Array<{ id: string; prevScore: number; currentScore: number }> = [];
+
+      for (const c2 of r2.cases) {
+        const c1 = r1Cases.get(c2.id);
+        if (c1) {
+          if (c1.passed && !c2.passed) {
+            regressions.push({
+              id: c2.id,
+              prevScore: c1.score,
+              currentScore: c2.score,
+              reason: Object.entries(c2.evaluatorResults).find(([_, r]) => !r.passed)?.[1]?.reason,
+            });
+          } else if (!c1.passed && c2.passed) {
+            improvements.push({
+              id: c2.id,
+              prevScore: c1.score,
+              currentScore: c2.score,
+            });
+          }
+        }
+      }
+
+      // Evaluator comparison
+      const allEvaluators = Array.from(
+        new Set([...Object.keys(r1.evaluatorScores || {}), ...Object.keys(r2.evaluatorScores || {})])
+      );
+      const evaluatorDiffs = allEvaluators.map((name) => {
+        const s1 = r1.evaluatorScores?.[name] ?? 0;
+        const s2 = r2.evaluatorScores?.[name] ?? 0;
+        return { name, score1: s1, score2: s2, delta: s2 - s1 };
+      });
+
+      const diffData = {
+        run1: { id: r1.id, timestamp: r1.timestamp, target: r1.targetName },
+        run2: { id: r2.id, timestamp: r2.timestamp, target: r2.targetName },
+        metrics: {
+          score: { run1: r1.overallScore, run2: r2.overallScore, delta: Number(scoreDelta.toFixed(4)) },
+          passRate: { run1: Number(passRate1.toFixed(4)), run2: Number(passRate2.toFixed(4)), delta: Number(passRateDelta.toFixed(4)) },
+          avgLatencyMs: { run1: r1.latencyStats.avgMs, run2: r2.latencyStats.avgMs, delta: latDelta },
+          totalCost: { run1: r1.totalCost, run2: r2.totalCost, delta: Number(costDelta.toFixed(6)) },
+        },
+        evaluators: evaluatorDiffs,
+        regressions,
+        improvements,
+      };
+
+      const format = options.format || 'terminal';
+      let outputText = '';
+
+      if (format === 'json') {
+        outputText = JSON.stringify(diffData, null, 2);
+      } else if (format === 'markdown') {
+        const fmtPct = (n: number) => `${(n * 100).toFixed(1)}%`;
+        const fmtDeltaPct = (n: number) => (n >= 0 ? `+${(n * 100).toFixed(1)}%` : `${(n * 100).toFixed(1)}%`);
+        outputText =
+          `# Evaluation Run Diff: ${r1.id} vs ${r2.id}\n\n` +
+          `| Metric | Run 1 (${r1.id}) | Run 2 (${r2.id}) | Delta |\n` +
+          `| :--- | :--- | :--- | :--- |\n` +
+          `| **Overall Score** | ${fmtPct(r1.overallScore)} | ${fmtPct(r2.overallScore)} | ${fmtDeltaPct(scoreDelta)} |\n` +
+          `| **Pass Rate** | ${fmtPct(passRate1)} | ${fmtPct(passRate2)} | ${fmtDeltaPct(passRateDelta)} |\n` +
+          `| **Avg Latency** | ${r1.latencyStats.avgMs}ms | ${r2.latencyStats.avgMs}ms | ${latDelta >= 0 ? '+' : ''}${latDelta}ms |\n` +
+          `| **Total Cost** | $${r1.totalCost.toFixed(4)} | $${r2.totalCost.toFixed(4)} | ${costDelta >= 0 ? '+$' : '-$'}${Math.abs(costDelta).toFixed(4)} |\n\n` +
+          `### Evaluator Breakdown\n\n` +
+          `| Evaluator | Run 1 | Run 2 | Delta |\n` +
+          `| :--- | :--- | :--- | :--- |\n` +
+          evaluatorDiffs.map((e) => `| ${e.name} | ${fmtPct(e.score1)} | ${fmtPct(e.score2)} | ${fmtDeltaPct(e.delta)} |`).join('\n') +
+          (regressions.length > 0
+            ? `\n\n### 🔻 Regressions (${regressions.length})\n\n` +
+              regressions.map((r) => `- **${r.id}**: ${fmtPct(r.prevScore)} ➔ ${fmtPct(r.currentScore)}${r.reason ? ` (${r.reason})` : ''}`).join('\n')
+            : '') +
+          (improvements.length > 0
+            ? `\n\n### 🟢 Improvements (${improvements.length})\n\n` +
+              improvements.map((im) => `- **${im.id}**: ${fmtPct(im.prevScore)} ➔ ${fmtPct(im.currentScore)} (PASSED)`).join('\n')
+            : '') +
+          '\n';
+      } else {
+        // Terminal format
+        const fmtPct = (n: number) => `${(n * 100).toFixed(1)}%`;
+        const fmtDeltaPct = (n: number) => {
+          const s = `${(n * 100).toFixed(1)}%`;
+          if (n > 0) return pc.green(`+${s}`);
+          if (n < 0) return pc.red(s);
+          return pc.dim('0.0%');
+        };
+
+        console.log(pc.bold(pc.cyan(`\nEvaluation Run Diff:`)));
+        console.log(`  Run 1 (Before): ${pc.bold(r1.id)} ${pc.dim(`(${new Date(r1.timestamp).toLocaleDateString()})`)}`);
+        console.log(`  Run 2 (After):  ${pc.bold(r2.id)} ${pc.dim(`(${new Date(r2.timestamp).toLocaleDateString()})`)}\n`);
+
+        console.log(pc.bold(`${'Metric'.padEnd(20)} ${'Run 1'.padEnd(14)} ${'Run 2'.padEnd(14)} Delta`));
+        console.log(pc.dim('------------------------------------------------------------'));
+        console.log(`${'Overall Score'.padEnd(20)} ${fmtPct(r1.overallScore).padEnd(14)} ${fmtPct(r2.overallScore).padEnd(14)} ${fmtDeltaPct(scoreDelta)}`);
+        console.log(`${'Pass Rate'.padEnd(20)} ${fmtPct(passRate1).padEnd(14)} ${fmtPct(passRate2).padEnd(14)} ${fmtDeltaPct(passRateDelta)}`);
+        console.log(`${'Avg Latency'.padEnd(20)} ${`${r1.latencyStats.avgMs}ms`.padEnd(14)} ${`${r2.latencyStats.avgMs}ms`.padEnd(14)} ${latDelta <= 0 ? pc.green(`${latDelta}ms`) : pc.red(`+${latDelta}ms`)}`);
+        console.log(`${'Total Cost'.padEnd(20)} ${`$${r1.totalCost.toFixed(4)}`.padEnd(14)} ${`$${r2.totalCost.toFixed(4)}`.padEnd(14)} ${costDelta <= 0 ? pc.green(`-$${Math.abs(costDelta).toFixed(4)}`) : pc.red(`+$${costDelta.toFixed(4)}`)}`);
+
+        if (evaluatorDiffs.length > 0) {
+          console.log(pc.bold(`\nEvaluator Breakdown:`));
+          for (const ev of evaluatorDiffs) {
+            console.log(`  ${ev.name.padEnd(18)} ${fmtPct(ev.score1).padEnd(12)} ➔ ${fmtPct(ev.score2).padEnd(12)} ${fmtDeltaPct(ev.delta)}`);
+          }
+        }
+
+        if (regressions.length > 0) {
+          console.log(pc.bold(pc.red(`\n🔻 Regressions (${regressions.length} cases):`)));
+          for (const reg of regressions) {
+            console.log(`  ${pc.red('✗')} ${reg.id}: was ${fmtPct(reg.prevScore)}, now ${fmtPct(reg.currentScore)}${reg.reason ? pc.dim(` — ${reg.reason}`) : ''}`);
+          }
+        }
+
+        if (improvements.length > 0) {
+          console.log(pc.bold(pc.green(`\n🟢 Improvements (${improvements.length} cases):`)));
+          for (const imp of improvements) {
+            console.log(`  ${pc.green('✓')} ${imp.id}: was ${fmtPct(imp.prevScore)}, now ${fmtPct(imp.currentScore)} (PASSED)`);
+          }
+        }
+        console.log('');
+      }
+
+      if (options.output) {
+        const outPath = path.resolve(cwd, options.output);
+        const outDir = path.dirname(outPath);
+        if (!fs.existsSync(outDir)) {
+          fs.mkdirSync(outDir, { recursive: true });
+        }
+        fs.writeFileSync(outPath, outputText, 'utf8');
+        console.log(pc.green(`\n✓ Diff saved to ${options.output}\n`));
+      } else if (format !== 'terminal') {
+        console.log(outputText);
+      }
+
+      if (options.ci && (scoreDelta < 0 || regressions.length > 0)) {
+        console.error(pc.red('CI Check Failed: Regression detected between evaluation runs.'));
+        process.exit(1);
+      }
     });
 
   // ----------------------------------------------------
