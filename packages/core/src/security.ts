@@ -97,11 +97,14 @@ export function redactObject<T>(input: T): T {
 /**
  * Prevent directory traversal attacks by validating that resolved path is inside target dir
  */
-export function safeResolvePath(baseDir: string, relativeOrAbsolutePath: string, allowEscape = true): string {
+export function safeResolvePath(baseDir: string, relativeOrAbsolutePath: string, allowEscape = false): string {
   const normalizedBase = path.resolve(baseDir);
   const resolved = path.resolve(baseDir, relativeOrAbsolutePath);
-  if (!allowEscape && !resolved.startsWith(normalizedBase)) {
-    throw new Error(`Path traversal detected: "${relativeOrAbsolutePath}" resolves outside "${baseDir}"`);
+  if (!allowEscape) {
+    const relative = path.relative(normalizedBase, resolved);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+      throw new Error(`Path traversal detected: "${relativeOrAbsolutePath}" resolves outside "${baseDir}"`);
+    }
   }
   return resolved;
 }

@@ -32,7 +32,7 @@ describe('Security & Redaction', () => {
   it('prevents path traversal attacks when allowEscape is false', () => {
     const baseDir = '/workspace/project';
     expect(() => {
-      safeResolvePath(baseDir, '../../etc/passwd', false);
+      safeResolvePath(baseDir, '../../etc/passwd');
     }).toThrow('Path traversal detected');
   });
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import yaml from 'yaml';
-import { Dataset, TestCase, InvalidDatasetError } from '@ai-eval/core';
+import { Dataset, TestCase, InvalidDatasetError, safeResolvePath } from '@ai-eval/core';
 import { DatasetSchema } from './schema.js';
 
 /**
@@ -102,7 +102,17 @@ export function parseJsonlDataset(content: string, datasetName: string): Dataset
 }
 
 export async function loadDataset(filePath: string, cwd: string = process.cwd()): Promise<Dataset> {
-  const resolvedPath = path.isAbsolute(filePath) ? filePath : path.resolve(cwd, filePath);
+  let resolvedPath: string;
+  try {
+    resolvedPath = safeResolvePath(cwd, filePath, false);
+  } catch {
+    // Allow absolute paths if they exist on disk
+    if (path.isAbsolute(filePath) && fs.existsSync(filePath)) {
+      resolvedPath = filePath;
+    } else {
+      throw new InvalidDatasetError(`Path traversal detected: "${filePath}" resolves outside project directory.`);
+    }
+  }
 
   if (!fs.existsSync(resolvedPath)) {
     throw new InvalidDatasetError(`Dataset file not found: ${resolvedPath}`);
