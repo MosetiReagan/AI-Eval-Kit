@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { redactSecrets, redactObject, safeResolvePath, escapeHtml } from '@ai-eval/core';
+import { redactSecrets, redactObject, safeResolvePath, escapeHtml, clearEnvSecretsCache } from '@ai-eval/core';
 
 describe('Security & Redaction', () => {
   it('redacts OpenAI, Anthropic, Bearer tokens, and secrets from strings', () => {
@@ -43,5 +43,15 @@ describe('Security & Redaction', () => {
     expect(escaped).toContain('&lt;script&gt;');
     expect(escaped).toContain('&amp;');
     expect(escaped).toContain('&quot;');
+  });
+
+  it('redacts dynamic env secrets and honors clearEnvSecretsCache', () => {
+    process.env['MY_SUPER_SECRET_KEY'] = 'my-secret-val-9876';
+    clearEnvSecretsCache();
+    const redacted = redactSecrets('connection string contains my-secret-val-9876 in plain text');
+    expect(redacted).not.toContain('my-secret-val-9876');
+    expect(redacted).toContain('[REDACTED]');
+    delete process.env['MY_SUPER_SECRET_KEY'];
+    clearEnvSecretsCache();
   });
 });

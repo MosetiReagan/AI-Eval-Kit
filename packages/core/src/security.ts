@@ -13,10 +13,19 @@ const SENSITIVE_PATTERNS = [
   /"(apiKey|api_key|token|secret|password|authorization)"\s*:\s*"[^"]+"/gi,
 ];
 
+let cachedEnvSecrets: string[] | null = null;
+
+export function clearEnvSecretsCache(): void {
+  cachedEnvSecrets = null;
+}
+
 /**
  * Get known secret values from current environment variables
  */
 function getEnvSecrets(): string[] {
+  if (cachedEnvSecrets) {
+    return cachedEnvSecrets;
+  }
   const secrets: string[] = [];
   const sensitiveKeys = ['KEY', 'SECRET', 'TOKEN', 'PASSWORD', 'AUTH', 'CREDENTIAL'];
 
@@ -27,6 +36,7 @@ function getEnvSecrets(): string[] {
       secrets.push(value);
     }
   }
+  cachedEnvSecrets = secrets;
   return secrets;
 }
 
