@@ -1,5 +1,10 @@
-import { ChatMessage, ProviderError, redactSecrets , InvalidOutputError } from '@ai-eval/core';
-import { Provider, ProviderCallOptions, ProviderResponse } from './types.js';
+import {
+  ChatMessage,
+  ProviderError,
+  redactSecrets,
+  InvalidOutputError,
+} from "@ai-eval/core";
+import { Provider, ProviderCallOptions, ProviderResponse } from "./types.js";
 
 export interface OllamaOptions {
   name?: string;
@@ -13,14 +18,22 @@ export class OllamaProvider implements Provider {
   private baseUrl: string;
 
   constructor(options: OllamaOptions = {}) {
-    this.name = options.name ?? 'ollama';
-    this.model = options.model ?? 'llama3';
-    this.baseUrl = (options.baseUrl ?? 'http://localhost:11434').replace(/\/+$/, '');
+    this.name = options.name ?? "ollama";
+    this.model = options.model ?? "llama3";
+    this.baseUrl = (options.baseUrl ?? "http://localhost:11434").replace(
+      /\/+$/,
+      "",
+    );
   }
 
-  async chat(messages: ChatMessage[], options?: ProviderCallOptions): Promise<ProviderResponse> {
+  async chat(
+    messages: ChatMessage[],
+    options?: ProviderCallOptions,
+  ): Promise<ProviderResponse> {
     if (!messages || messages.length === 0) {
-      throw new InvalidOutputError(`${this.name}: messages array must not be empty`);
+      throw new InvalidOutputError(
+        `${this.name}: messages array must not be empty`,
+      );
     }
     const startTime = Date.now();
     const url = `${this.baseUrl}/api/chat`;
@@ -33,17 +46,21 @@ export class OllamaProvider implements Provider {
         content: m.content,
       })),
       options: {
-        ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
+        ...(options?.temperature !== undefined
+          ? { temperature: options.temperature }
+          : {}),
         ...(options?.seed !== undefined ? { seed: options.seed } : {}),
-        ...(options?.maxTokens !== undefined ? { num_predict: options.maxTokens } : {}),
+        ...(options?.maxTokens !== undefined
+          ? { num_predict: options.maxTokens }
+          : {}),
       },
     };
 
     let res: Response;
     try {
       res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
     } catch (err: unknown) {
@@ -51,17 +68,20 @@ export class OllamaProvider implements Provider {
       throw new ProviderError(
         `Failed to connect to Ollama at ${this.baseUrl}. Is Ollama running? Error: ${redactSecrets(msg)}`,
         undefined,
-        true
+        true,
       );
     }
 
     if (!res.ok) {
       const err = await res.text();
-      throw new ProviderError(`Ollama returned error status ${res.status}: ${redactSecrets(err)}`, res.status);
+      throw new ProviderError(
+        `Ollama returned error status ${res.status}: ${redactSecrets(err)}`,
+        res.status,
+      );
     }
 
     const data = (await res.json()) as any;
-    const output = data.message?.content ?? '';
+    const output = data.message?.content ?? "";
 
     return {
       output,
@@ -79,8 +99,8 @@ export class OllamaProvider implements Provider {
     const embeddings: number[][] = [];
     for (const text of texts) {
       const res = await fetch(`${this.baseUrl}/api/embeddings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: this.model,
           prompt: text,
@@ -88,7 +108,9 @@ export class OllamaProvider implements Provider {
       });
 
       if (!res.ok) {
-        throw new ProviderError(`Ollama embedding failed with status ${res.status}`);
+        throw new ProviderError(
+          `Ollama embedding failed with status ${res.status}`,
+        );
       }
 
       const json = (await res.json()) as any;

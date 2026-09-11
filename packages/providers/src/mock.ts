@@ -1,10 +1,13 @@
-import { ChatMessage, ProviderError , InvalidOutputError } from '@ai-eval/core';
-import { Provider, ProviderCallOptions, ProviderResponse } from './types.js';
+import { ChatMessage, ProviderError, InvalidOutputError } from "@ai-eval/core";
+import { Provider, ProviderCallOptions, ProviderResponse } from "./types.js";
 
 export interface MockRule {
   match: string | RegExp | ((messages: ChatMessage[]) => boolean);
   response: string;
-  toolCalls?: Array<{ name: string; arguments: Record<string, unknown> | string }>;
+  toolCalls?: Array<{
+    name: string;
+    arguments: Record<string, unknown> | string;
+  }>;
   latencyMs?: number;
   shouldFail?: boolean;
   failureCode?: number;
@@ -27,9 +30,9 @@ export class MockProvider implements Provider {
   private defaultLatencyMs: number;
 
   constructor(options: MockProviderOptions = {}) {
-    this.name = options.name ?? 'mock';
-    this.model = options.model ?? 'mock-model';
-    this.defaultResponse = options.defaultResponse ?? 'Mock response';
+    this.name = options.name ?? "mock";
+    this.model = options.model ?? "mock-model";
+    this.defaultResponse = options.defaultResponse ?? "Mock response";
     this.rules = options.rules ?? [];
     this.defaultLatencyMs = options.defaultLatencyMs ?? 10;
   }
@@ -39,16 +42,21 @@ export class MockProvider implements Provider {
     return this;
   }
 
-  async chat(messages: ChatMessage[], options?: ProviderCallOptions): Promise<ProviderResponse> {
+  async chat(
+    messages: ChatMessage[],
+    options?: ProviderCallOptions,
+  ): Promise<ProviderResponse> {
     if (!messages || messages.length === 0) {
-      throw new InvalidOutputError(`${this.name}: messages array must not be empty`);
+      throw new InvalidOutputError(
+        `${this.name}: messages array must not be empty`,
+      );
     }
     const startTime = Date.now();
-    const lastMessage = messages[messages.length - 1]?.content ?? '';
+    const lastMessage = messages[messages.length - 1]?.content ?? "";
 
     let matchedRule: MockRule | undefined;
     for (const rule of this.rules) {
-      if (typeof rule.match === 'string' && lastMessage.includes(rule.match)) {
+      if (typeof rule.match === "string" && lastMessage.includes(rule.match)) {
         matchedRule = rule;
         break;
       }
@@ -56,7 +64,7 @@ export class MockProvider implements Provider {
         matchedRule = rule;
         break;
       }
-      if (typeof rule.match === 'function' && rule.match(messages)) {
+      if (typeof rule.match === "function" && rule.match(messages)) {
         matchedRule = rule;
         break;
       }
@@ -69,9 +77,9 @@ export class MockProvider implements Provider {
 
     if (matchedRule?.shouldFail) {
       throw new ProviderError(
-        matchedRule.failureMessage ?? 'Simulated mock provider failure',
+        matchedRule.failureMessage ?? "Simulated mock provider failure",
         matchedRule.failureCode ?? 500,
-        true
+        true,
       );
     }
 

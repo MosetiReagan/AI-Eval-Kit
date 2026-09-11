@@ -1,7 +1,7 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import crypto from 'node:crypto';
-import { EvalOutput } from './types.js';
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+import { EvalOutput } from "./types.js";
 
 interface CacheEntry {
   key: string;
@@ -15,8 +15,12 @@ export class ResponseCache {
   private enabled: boolean;
   private maxEntries: number;
 
-  constructor(baseDir: string = process.cwd(), enabled = true, maxEntries = 1000) {
-    this.cacheDir = path.join(baseDir, '.eval', 'cache');
+  constructor(
+    baseDir: string = process.cwd(),
+    enabled = true,
+    maxEntries = 1000,
+  ) {
+    this.cacheDir = path.join(baseDir, ".eval", "cache");
     this.enabled = enabled;
     this.maxEntries = maxEntries;
     if (this.enabled) {
@@ -30,7 +34,7 @@ export class ResponseCache {
 
   generateKey(components: unknown[]): string {
     const serialized = JSON.stringify(components);
-    return crypto.createHash('sha256').update(serialized).digest('hex');
+    return crypto.createHash("sha256").update(serialized).digest("hex");
   }
 
   get(key: string): EvalOutput | null {
@@ -39,7 +43,7 @@ export class ResponseCache {
     if (!fs.existsSync(filePath)) return null;
 
     try {
-      const content = fs.readFileSync(filePath, 'utf8');
+      const content = fs.readFileSync(filePath, "utf8");
       const entry: CacheEntry = JSON.parse(content);
 
       if (entry.ttlMs && Date.now() - entry.timestamp > entry.ttlMs) {
@@ -72,7 +76,7 @@ export class ResponseCache {
         timestamp: Date.now(),
         ttlMs,
       };
-      fs.writeFileSync(filePath, JSON.stringify(entry, null, 2), 'utf8');
+      fs.writeFileSync(filePath, JSON.stringify(entry, null, 2), "utf8");
 
       if (this.maxEntries > 0) {
         this.prune(this.maxEntries);
@@ -85,7 +89,9 @@ export class ResponseCache {
   prune(maxEntries: number): number {
     if (!fs.existsSync(this.cacheDir)) return 0;
     try {
-      const files = fs.readdirSync(this.cacheDir).filter((f) => f.endsWith('.json'));
+      const files = fs
+        .readdirSync(this.cacheDir)
+        .filter((f) => f.endsWith(".json"));
       if (files.length <= maxEntries) return 0;
 
       const fileStats = files.map((file) => {

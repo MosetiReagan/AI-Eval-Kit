@@ -1,16 +1,20 @@
-import { EvaluatorDefinition } from '@ai-eval/core';
-import { exactMatchEvaluator, containsEvaluator, regexEvaluator } from './deterministic.js';
-import { jsonValidityEvaluator, jsonSchemaEvaluator } from './json.js';
-import { semanticSimilarityEvaluator } from './similarity.js';
-import { llmJudgeEvaluator, criteriaEvaluator } from './llm_judge.js';
-import { hallucinationEvaluator } from './hallucination.js';
+import { EvaluatorDefinition } from "@ai-eval/core";
+import {
+  exactMatchEvaluator,
+  containsEvaluator,
+  regexEvaluator,
+} from "./deterministic.js";
+import { jsonValidityEvaluator, jsonSchemaEvaluator } from "./json.js";
+import { semanticSimilarityEvaluator } from "./similarity.js";
+import { llmJudgeEvaluator, criteriaEvaluator } from "./llm_judge.js";
+import { hallucinationEvaluator } from "./hallucination.js";
 import {
   ragContextRelevanceEvaluator,
   ragContextRecallEvaluator,
   ragAnswerRelevanceEvaluator,
   ragCitationEvaluator,
-} from './rag.js';
-import { toolCallEvaluator } from './agent.js';
+} from "./rag.js";
+import { toolCallEvaluator } from "./agent.js";
 
 export class EvaluatorRegistry {
   private evaluators: Map<string, EvaluatorDefinition> = new Map();

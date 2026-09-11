@@ -1,11 +1,11 @@
-import { ProviderConfig } from '@ai-eval/core';
-import { Provider } from './types.js';
-import { MockProvider } from './mock.js';
-import { OpenAICompatibleProvider } from './openai.js';
-import { AnthropicProvider } from './anthropic.js';
-import { GeminiProvider } from './gemini.js';
-import { OllamaProvider } from './ollama.js';
-import { HttpProvider } from './http.js';
+import { ProviderConfig } from "@ai-eval/core";
+import { Provider } from "./types.js";
+import { MockProvider } from "./mock.js";
+import { OpenAICompatibleProvider } from "./openai.js";
+import { AnthropicProvider } from "./anthropic.js";
+import { GeminiProvider } from "./gemini.js";
+import { OllamaProvider } from "./ollama.js";
+import { HttpProvider } from "./http.js";
 
 export class ProviderRegistry {
   private providers: Map<string, Provider> = new Map();
@@ -32,15 +32,15 @@ export class ProviderRegistry {
     let provider: Provider;
 
     switch (type) {
-      case 'mock':
+      case "mock":
         provider = new MockProvider({
           name,
-          model: config.model ?? 'mock-model',
+          model: config.model ?? "mock-model",
         });
         break;
 
-      case 'openai':
-      case 'openai-compatible':
+      case "openai":
+      case "openai-compatible":
         provider = new OpenAICompatibleProvider({
           name,
           apiKey: config.apiKey,
@@ -50,7 +50,7 @@ export class ProviderRegistry {
         });
         break;
 
-      case 'anthropic':
+      case "anthropic":
         provider = new AnthropicProvider({
           name,
           apiKey: config.apiKey,
@@ -60,8 +60,8 @@ export class ProviderRegistry {
         });
         break;
 
-      case 'gemini':
-      case 'google':
+      case "gemini":
+      case "google":
         provider = new GeminiProvider({
           name,
           apiKey: config.apiKey,
@@ -70,7 +70,7 @@ export class ProviderRegistry {
         });
         break;
 
-      case 'ollama':
+      case "ollama":
         provider = new OllamaProvider({
           name,
           baseUrl: config.baseUrl,
@@ -78,9 +78,11 @@ export class ProviderRegistry {
         });
         break;
 
-      case 'http':
+      case "http":
         if (!config.baseUrl) {
-          throw new Error(`HTTP provider '${name}' requires baseUrl (the endpoint URL).`);
+          throw new Error(
+            `HTTP provider '${name}' requires baseUrl (the endpoint URL).`,
+          );
         }
         provider = new HttpProvider({
           name,
@@ -101,7 +103,9 @@ export class ProviderRegistry {
             headers: config.headers,
           });
         } else {
-          throw new Error(`Unknown provider type '${config.type}' for provider '${name}'`);
+          throw new Error(
+            `Unknown provider type '${config.type}' for provider '${name}'`,
+          );
         }
     }
 

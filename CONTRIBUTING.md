@@ -9,6 +9,7 @@ Thank you for contributing to AI Eval Kit! We welcome bug fixes, documentation i
    - pnpm >= 9.0.0
 
 2. **Clone and Install:**
+
    ```bash
    git clone https://github.com/reagan/ai-eval-kit.git
    cd ai-eval-kit
@@ -16,11 +17,13 @@ Thank you for contributing to AI Eval Kit! We welcome bug fixes, documentation i
    ```
 
 3. **Build Packages:**
+
    ```bash
    pnpm build
    ```
 
 4. **Run Test Suite:**
+
    ```bash
    pnpm test
    ```

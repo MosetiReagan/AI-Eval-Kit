@@ -1,19 +1,22 @@
-import { EvaluationResult, EvaluatorContext } from '@ai-eval/core';
-import { defineEvaluator } from './types.js';
+import { EvaluationResult, EvaluatorContext } from "@ai-eval/core";
+import { defineEvaluator } from "./types.js";
 
 /**
  * Exact match evaluator
  */
 export const exactMatchEvaluator = defineEvaluator({
-  name: 'exact_match',
-  description: 'Compares the output directly against the expected string',
+  name: "exact_match",
+  description: "Compares the output directly against the expected string",
   evaluate: (ctx: EvaluatorContext): EvaluationResult => {
-    const expected = ctx.expected?.exact ?? (typeof ctx.expected === 'string' ? ctx.expected : undefined);
+    const expected =
+      ctx.expected?.exact ??
+      (typeof ctx.expected === "string" ? ctx.expected : undefined);
     if (expected === undefined) {
       return {
         score: 1,
         passed: true,
-        reason: 'Skipped: No expected.exact or string value specified in test case',
+        reason:
+          "Skipped: No expected.exact or string value specified in test case",
       };
     }
 
@@ -32,15 +35,17 @@ export const exactMatchEvaluator = defineEvaluator({
     }
 
     if (options.ignorePunctuation) {
-      actual = actual.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
-      target = target.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
+      actual = actual.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
+      target = target.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "");
     }
 
     const passed = actual === target;
     return {
       score: passed ? 1 : 0,
       passed,
-      reason: passed ? 'Exact match matched' : `Expected "${target}", got "${actual}"`,
+      reason: passed
+        ? "Exact match matched"
+        : `Expected "${target}", got "${actual}"`,
     };
   },
 });
@@ -49,26 +54,28 @@ export const exactMatchEvaluator = defineEvaluator({
  * Contains evaluator
  */
 export const containsEvaluator = defineEvaluator({
-  name: 'contains',
-  description: 'Verifies that the output contains the required substring or strings',
+  name: "contains",
+  description:
+    "Verifies that the output contains the required substring or strings",
   evaluate: (ctx: EvaluatorContext): EvaluationResult => {
     let expected =
       ctx.expected?.contains ??
       ctx.expected?.exact ??
-      (typeof ctx.expected === 'string' ? ctx.expected : undefined);
+      (typeof ctx.expected === "string" ? ctx.expected : undefined);
 
     if (!expected) {
       return {
         score: 1,
         passed: true,
-        reason: 'Skipped: No expected substring or string specified in test case',
+        reason:
+          "Skipped: No expected substring or string specified in test case",
       };
     }
 
     const expectedList = Array.isArray(expected) ? expected : [expected];
     const options = ctx.options ?? {};
     const ignoreCase = options.ignoreCase ?? true;
-    const mode = options.mode === 'any' ? 'any' : 'all';
+    const mode = options.mode === "any" ? "any" : "all";
 
     let actual = ctx.actual.output;
     if (ignoreCase) {
@@ -87,15 +94,16 @@ export const containsEvaluator = defineEvaluator({
       }
     }
 
-    const passed = mode === 'any' ? matched.length > 0 : missing.length === 0;
-    const score = expectedList.length > 0 ? matched.length / expectedList.length : 1;
+    const passed = mode === "any" ? matched.length > 0 : missing.length === 0;
+    const score =
+      expectedList.length > 0 ? matched.length / expectedList.length : 1;
 
     return {
       score: Number(score.toFixed(4)),
       passed,
       reason: passed
         ? `Contains check passed (${matched.length}/${expectedList.length} matched)`
-        : `Missing expected terms: [${missing.join(', ')}]`,
+        : `Missing expected terms: [${missing.join(", ")}]`,
       metadata: { matched, missing },
     };
   },
@@ -105,19 +113,20 @@ export const containsEvaluator = defineEvaluator({
  * Regex evaluator
  */
 export const regexEvaluator = defineEvaluator({
-  name: 'regex',
-  description: 'Evaluates output against a regular expression',
+  name: "regex",
+  description: "Evaluates output against a regular expression",
   evaluate: (ctx: EvaluatorContext): EvaluationResult => {
     const pattern = (ctx.options?.pattern as string) ?? ctx.expected?.regex;
     if (!pattern) {
       return {
         score: 1,
         passed: true,
-        reason: 'Skipped: No pattern specified in expected.regex or evaluator options',
+        reason:
+          "Skipped: No pattern specified in expected.regex or evaluator options",
       };
     }
 
-    const flags = (ctx.options?.flags as string) ?? '';
+    const flags = (ctx.options?.flags as string) ?? "";
     const invert = Boolean(ctx.options?.invert);
 
     let regex: RegExp;

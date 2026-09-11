@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## [1.0.0] - 2026-09-11
 
 ### Added
+
 - **Core Engine:**
   - Robust Zod-backed project and evaluation configuration loader (`ai-eval.yaml`, `ai-eval.json`).
   - Safe environment variable interpolation (`${VAR}`, `${VAR:-default}`).

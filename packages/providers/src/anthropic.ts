@@ -1,5 +1,12 @@
-import { ChatMessage, ProviderError, AuthenticationError, RateLimitError, redactSecrets , InvalidOutputError } from '@ai-eval/core';
-import { Provider, ProviderCallOptions, ProviderResponse } from './types.js';
+import {
+  ChatMessage,
+  ProviderError,
+  AuthenticationError,
+  RateLimitError,
+  redactSecrets,
+  InvalidOutputError,
+} from "@ai-eval/core";
+import { Provider, ProviderCallOptions, ProviderResponse } from "./types.js";
 
 export interface AnthropicOptions {
   name?: string;
@@ -17,36 +24,44 @@ export class AnthropicProvider implements Provider {
   private customHeaders: Record<string, string>;
 
   constructor(options: AnthropicOptions = {}) {
-    this.name = options.name ?? 'anthropic';
-    this.model = options.model ?? 'claude-3-5-sonnet-20241022';
-    this.baseUrl = (options.baseUrl ?? 'https://api.anthropic.com/v1').replace(/\/+$/, '');
+    this.name = options.name ?? "anthropic";
+    this.model = options.model ?? "claude-3-5-sonnet-20241022";
+    this.baseUrl = (options.baseUrl ?? "https://api.anthropic.com/v1").replace(
+      /\/+$/,
+      "",
+    );
     this.apiKey = options.apiKey;
     this.customHeaders = options.headers ?? {};
   }
 
-  async chat(messages: ChatMessage[], options?: ProviderCallOptions): Promise<ProviderResponse> {
+  async chat(
+    messages: ChatMessage[],
+    options?: ProviderCallOptions,
+  ): Promise<ProviderResponse> {
     if (!messages || messages.length === 0) {
-      throw new InvalidOutputError(`${this.name}: messages array must not be empty`);
+      throw new InvalidOutputError(
+        `${this.name}: messages array must not be empty`,
+      );
     }
     const startTime = Date.now();
     const url = `${this.baseUrl}/messages`;
 
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'anthropic-version': '2023-06-01',
+      "Content-Type": "application/json",
+      "anthropic-version": "2023-06-01",
       ...this.customHeaders,
     };
 
     if (this.apiKey) {
-      headers['x-api-key'] = this.apiKey;
+      headers["x-api-key"] = this.apiKey;
     }
 
     // Extract system message
-    const systemMessage = messages.find((m) => m.role === 'system')?.content;
+    const systemMessage = messages.find((m) => m.role === "system")?.content;
     const nonSystemMessages = messages
-      .filter((m) => m.role !== 'system')
+      .filter((m) => m.role !== "system")
       .map((m) => ({
-        role: m.role === 'assistant' ? 'assistant' : 'user',
+        role: m.role === "assistant" ? "assistant" : "user",
         content: m.content,
       }));
 
@@ -55,11 +70,13 @@ export class AnthropicProvider implements Provider {
       max_tokens: options?.maxTokens ?? 1024,
       messages: nonSystemMessages,
       ...(systemMessage ? { system: systemMessage } : {}),
-      ...(options?.temperature !== undefined ? { temperature: options.temperature } : {}),
+      ...(options?.temperature !== undefined
+        ? { temperature: options.temperature }
+        : {}),
     };
 
     if (options?.tools && options.tools.length > 0) {
-      body['tools'] = options.tools.map((t) => ({
+      body["tools"] = options.tools.map((t) => ({
         name: t.function.name,
         description: t.function.description,
         input_schema: t.function.parameters,
@@ -69,40 +86,56 @@ export class AnthropicProvider implements Provider {
     let response: Response;
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), options?.timeoutMs ?? 60000);
+      const timeout = setTimeout(
+        () => controller.abort(),
+        options?.timeoutMs ?? 60000,
+      );
 
       response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers,
         body: JSON.stringify(body),
-        signal: options?.signal ? AbortSignal.any([controller.signal, options.signal]) : controller.signal,
+        signal: options?.signal
+          ? AbortSignal.any([controller.signal, options.signal])
+          : controller.signal,
       });
       clearTimeout(timeout);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      throw new ProviderError(`Network request to Anthropic failed: ${redactSecrets(msg)}`, undefined, true);
+      throw new ProviderError(
+        `Network request to Anthropic failed: ${redactSecrets(msg)}`,
+        undefined,
+        true,
+      );
     }
 
     if (!response.ok) {
       const errText = await response.text();
       if (response.status === 401 || response.status === 403) {
-        throw new AuthenticationError(`Anthropic auth failed: ${redactSecrets(errText)}`);
+        throw new AuthenticationError(
+          `Anthropic auth failed: ${redactSecrets(errText)}`,
+        );
       }
       if (response.status === 429) {
-        throw new RateLimitError(`Anthropic rate limit: ${redactSecrets(errText)}`);
+        throw new RateLimitError(
+          `Anthropic rate limit: ${redactSecrets(errText)}`,
+        );
       }
-      throw new ProviderError(`Anthropic error (${response.status}): ${redactSecrets(errText)}`, response.status);
+      throw new ProviderError(
+        `Anthropic error (${response.status}): ${redactSecrets(errText)}`,
+        response.status,
+      );
     }
 
     const data = (await response.json()) as any;
-    let output = '';
+    let output = "";
     const toolCalls: any[] = [];
 
     if (Array.isArray(data.content)) {
       for (const block of data.content) {
-        if (block.type === 'text') {
+        if (block.type === "text") {
           output += block.text;
-        } else if (block.type === 'tool_use') {
+        } else if (block.type === "tool_use") {
           toolCalls.push({
             id: block.id,
             name: block.name,

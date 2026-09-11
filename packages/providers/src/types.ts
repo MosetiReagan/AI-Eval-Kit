@@ -1,7 +1,7 @@
-import { ChatMessage, ToolCall, TokenUsage } from '@ai-eval/core';
+import { ChatMessage, ToolCall, TokenUsage } from "@ai-eval/core";
 
 export interface ProviderToolDefinition {
-  type: 'function';
+  type: "function";
   function: {
     name: string;
     description?: string;
@@ -15,7 +15,7 @@ export interface ProviderCallOptions {
   seed?: number;
   tools?: ProviderToolDefinition[];
   toolChoice?: string | Record<string, unknown>;
-  responseFormat?: { type: 'text' | 'json_object' };
+  responseFormat?: { type: "text" | "json_object" };
   timeoutMs?: number;
   signal?: AbortSignal;
 }
@@ -31,6 +31,9 @@ export interface ProviderResponse {
 export interface Provider {
   readonly name: string;
   readonly model: string;
-  chat(messages: ChatMessage[], options?: ProviderCallOptions): Promise<ProviderResponse>;
+  chat(
+    messages: ChatMessage[],
+    options?: ProviderCallOptions,
+  ): Promise<ProviderResponse>;
   embed?(texts: string[]): Promise<number[][]>;
 }

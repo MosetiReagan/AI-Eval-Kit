@@ -1,7 +1,7 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 export const ChatMessageSchema = z.object({
-  role: z.enum(['system', 'user', 'assistant', 'tool']),
+  role: z.enum(["system", "user", "assistant", "tool"]),
   content: z.string(),
   name: z.string().optional(),
   tool_calls: z.array(z.any()).optional(),
@@ -9,12 +9,14 @@ export const ChatMessageSchema = z.object({
 
 export const EvalInputSchema = z.union([
   z.string(),
-  z.object({
-    message: z.string().optional(),
-    messages: z.array(ChatMessageSchema).optional(),
-    context: z.union([z.string(), z.record(z.unknown())]).optional(),
-    metadata: z.record(z.unknown()).optional(),
-  }).passthrough(),
+  z
+    .object({
+      message: z.string().optional(),
+      messages: z.array(ChatMessageSchema).optional(),
+      context: z.union([z.string(), z.record(z.unknown())]).optional(),
+      metadata: z.record(z.unknown()).optional(),
+    })
+    .passthrough(),
 ]);
 
 export const ExpectedToolsSchema = z.object({
@@ -26,14 +28,16 @@ export const ExpectedToolsSchema = z.object({
 
 export const EvalExpectedSchema = z.union([
   z.string(),
-  z.object({
-    exact: z.string().optional(),
-    contains: z.union([z.string(), z.array(z.string())]).optional(),
-    regex: z.string().optional(),
-    jsonSchema: z.record(z.unknown()).optional(),
-    criteria: z.array(z.string()).optional(),
-    tools: ExpectedToolsSchema.optional(),
-  }).passthrough(),
+  z
+    .object({
+      exact: z.string().optional(),
+      contains: z.union([z.string(), z.array(z.string())]).optional(),
+      regex: z.string().optional(),
+      jsonSchema: z.record(z.unknown()).optional(),
+      criteria: z.array(z.string()).optional(),
+      tools: ExpectedToolsSchema.optional(),
+    })
+    .passthrough(),
 ]);
 
 export const TestCaseSchema = z.object({

@@ -1,72 +1,87 @@
-import http from 'node:http';
-import { HistoryManager, BaselineManager, escapeHtml } from '@ai-eval/core';
-import pc from 'picocolors';
+import http from "node:http";
+import { HistoryManager, BaselineManager, escapeHtml } from "@ai-eval/core";
+import pc from "picocolors";
 
-export function startDashboardServer(port = 3000, cwd: string = process.cwd(), host = '127.0.0.1'): http.Server {
+export function startDashboardServer(
+  port = 3000,
+  cwd: string = process.cwd(),
+  host = "127.0.0.1",
+): http.Server {
   const history = new HistoryManager(cwd);
   const baselineManager = new BaselineManager(cwd);
 
   const server = http.createServer((req, res) => {
-    const url = new URL(req.url ?? '/', `http://localhost:${port}`);
+    const url = new URL(req.url ?? "/", `http://localhost:${port}`);
 
     // API: List runs
-    if (url.pathname === '/api/runs' || url.pathname === '/api/history') {
+    if (url.pathname === "/api/runs" || url.pathname === "/api/history") {
       const runs = history.listRuns();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(runs));
       return;
     }
 
     // API: Get specific run
-    if (url.pathname.startsWith('/api/runs/')) {
-      const id = url.pathname.replace('/api/runs/', '');
+    if (url.pathname.startsWith("/api/runs/")) {
+      const id = url.pathname.replace("/api/runs/", "");
       const run = history.getRun(id);
       if (!run) {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ error: 'Run not found' }));
+        res.writeHead(404, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Run not found" }));
         return;
       }
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(run));
       return;
     }
 
     // API: Baseline
-    if (url.pathname === '/api/baseline') {
+    if (url.pathname === "/api/baseline") {
       const baseline = baselineManager.getBaseline();
-      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(baseline ?? null));
       return;
     }
 
     // Serve Dashboard SPA HTML
-    if (url.pathname === '/' || url.pathname === '/index.html') {
+    if (url.pathname === "/" || url.pathname === "/index.html") {
       const runs = history.listRuns();
-      const latestRun = runs.length > 0 && runs[0]?.id ? history.getRun(runs[0].id) : null;
+      const latestRun =
+        runs.length > 0 && runs[0]?.id ? history.getRun(runs[0].id) : null;
       const baseline = baselineManager.getBaseline();
 
       const html = generateDashboardHtml(runs, latestRun, baseline);
-      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
       res.end(html);
       return;
     }
 
-    res.writeHead(404, { 'Content-Type': 'text/plain' });
-    res.end('Not Found');
+    res.writeHead(404, { "Content-Type": "text/plain" });
+    res.end("Not Found");
   });
 
   server.listen(port, host, () => {
-    console.log(pc.green(`✓ AI Eval Kit Dashboard running at http://${host}:${port}`));
-    if (host === '0.0.0.0') {
-      console.log(pc.yellow('⚠ Warning: Dashboard is bound to all network interfaces (0.0.0.0).'));
+    console.log(
+      pc.green(`✓ AI Eval Kit Dashboard running at http://${host}:${port}`),
+    );
+    if (host === "0.0.0.0") {
+      console.log(
+        pc.yellow(
+          "⚠ Warning: Dashboard is bound to all network interfaces (0.0.0.0).",
+        ),
+      );
     }
-    console.log(pc.dim('Press Ctrl+C to stop.'));
+    console.log(pc.dim("Press Ctrl+C to stop."));
   });
 
   return server;
 }
 
-function generateDashboardHtml(runs: any[], latestRun: any, baseline: any): string {
+function generateDashboardHtml(
+  runs: any[],
+  latestRun: any,
+  baseline: any,
+): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -192,15 +207,17 @@ function generateDashboardHtml(runs: any[], latestRun: any, baseline: any): stri
         </div>
       </div>
       <div>
-        ${latestRun ? `<span class="badge ${latestRun.passedCases === latestRun.totalCases ? 'badge-pass' : 'badge-fail'}">Latest: ${latestRun.passedCases === latestRun.totalCases ? 'Passed' : 'Failures Detected'}</span>` : ''}
+        ${latestRun ? `<span class="badge ${latestRun.passedCases === latestRun.totalCases ? "badge-pass" : "badge-fail"}">Latest: ${latestRun.passedCases === latestRun.totalCases ? "Passed" : "Failures Detected"}</span>` : ""}
       </div>
     </header>
 
-    ${latestRun ? `
+    ${
+      latestRun
+        ? `
     <div class="grid">
       <div class="card">
         <div class="card-label">Latest Overall Score</div>
-        <div class="card-val" style="color: ${latestRun.overallScore >= 0.8 ? 'var(--green)' : 'var(--red)'};">
+        <div class="card-val" style="color: ${latestRun.overallScore >= 0.8 ? "var(--green)" : "var(--red)"};">
           ${(latestRun.overallScore * 100).toFixed(1)}%
         </div>
         <div class="card-sub">${latestRun.passedCases}/${latestRun.totalCases} cases passed</div>
@@ -217,18 +234,20 @@ function generateDashboardHtml(runs: any[], latestRun: any, baseline: any): stri
       </div>
       <div class="card">
         <div class="card-label">Baseline Status</div>
-        <div class="card-val" style="font-size: 22px; color: ${baseline ? 'var(--green)' : '#64748b'};">
-          ${baseline ? `${(baseline.overallScore * 100).toFixed(1)}%` : 'No baseline'}
+        <div class="card-val" style="font-size: 22px; color: ${baseline ? "var(--green)" : "#64748b"};">
+          ${baseline ? `${(baseline.overallScore * 100).toFixed(1)}%` : "No baseline"}
         </div>
-        <div class="card-sub">${baseline ? `Baseline ID: ${baseline.id.slice(0, 12)}...` : 'Run `ai-eval baseline`'}</div>
+        <div class="card-sub">${baseline ? `Baseline ID: ${baseline.id.slice(0, 12)}...` : "Run `ai-eval baseline`"}</div>
       </div>
     </div>
-    ` : `
+    `
+        : `
     <div class="card" style="text-align: center; padding: 48px 24px; margin-bottom: 24px;">
       <h2>No Evaluation Runs Recorded Yet</h2>
       <p style="margin-top: 8px; color: #64748b;">Run <code>ai-eval test</code> to execute evaluations and see results here.</p>
     </div>
-    `}
+    `
+    }
 
     <div class="layout-split">
       <!-- Runs sidebar -->
@@ -236,33 +255,45 @@ function generateDashboardHtml(runs: any[], latestRun: any, baseline: any): stri
         <div class="card">
           <div class="card-label" style="margin-bottom: 14px;">Evaluation History (${runs.length})</div>
           <div class="history-list">
-            ${runs.map((r, i) => `
-              <div class="history-item ${i === 0 ? 'active' : ''}" onclick="selectRun('${escapeHtml(r.id)}')">
+            ${runs
+              .map(
+                (r, i) => `
+              <div class="history-item ${i === 0 ? "active" : ""}" onclick="selectRun('${escapeHtml(r.id)}')">
                 <div class="history-item-header">
                   <span class="history-name">${escapeHtml(r.evaluationName || r.projectName)}</span>
-                  <span class="history-score" style="color: ${r.overallScore >= 0.8 ? 'var(--green)' : 'var(--red)'};">
+                  <span class="history-score" style="color: ${r.overallScore >= 0.8 ? "var(--green)" : "var(--red)"};">
                     ${(r.overallScore * 100).toFixed(1)}%
                   </span>
                 </div>
                 <div style="font-size: 12px; color: #64748b;">
-                  ${new Date(r.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &bull; ${r.totalCases} cases &bull; ${r.avgLatencyMs}ms
+                  ${new Date(r.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} &bull; ${r.totalCases} cases &bull; ${r.avgLatencyMs}ms
                 </div>
               </div>
-            `).join('')}
-            ${runs.length === 0 ? '<div style="color: #64748b; font-size: 13px;">No runs found</div>' : ''}
+            `,
+              )
+              .join("")}
+            ${runs.length === 0 ? '<div style="color: #64748b; font-size: 13px;">No runs found</div>' : ""}
           </div>
         </div>
       </div>
 
       <!-- Run Details Main View -->
       <div>
-        ${latestRun ? `
+        ${
+          latestRun
+            ? `
         <div class="card" style="margin-bottom: 20px;">
           <div class="card-label" style="margin-bottom: 16px;">Evaluator Breakdown</div>
-          ${Object.entries(latestRun.evaluatorScores).map(([name, score]: [string, any]) => {
-            const pct = (score * 100).toFixed(1);
-            const color = score >= 0.8 ? 'var(--green)' : score >= 0.5 ? 'var(--yellow)' : 'var(--red)';
-            return `
+          ${Object.entries(latestRun.evaluatorScores)
+            .map(([name, score]: [string, any]) => {
+              const pct = (score * 100).toFixed(1);
+              const color =
+                score >= 0.8
+                  ? "var(--green)"
+                  : score >= 0.5
+                    ? "var(--yellow)"
+                    : "var(--red)";
+              return `
             <div class="eval-row">
               <span class="eval-label">${escapeHtml(name)}</span>
               <div class="eval-bar">
@@ -270,7 +301,8 @@ function generateDashboardHtml(runs: any[], latestRun: any, baseline: any): stri
               </div>
               <span class="eval-score" style="color: ${color};">${pct}%</span>
             </div>`;
-          }).join('')}
+            })
+            .join("")}
         </div>
 
         <div class="card">
@@ -289,10 +321,14 @@ function generateDashboardHtml(runs: any[], latestRun: any, baseline: any): stri
               </tr>
             </thead>
             <tbody>
-              ${latestRun.cases.map((c: any) => {
-                const inputStr = typeof c.case.input === 'string' ? c.case.input : c.case.input.message ?? JSON.stringify(c.case.input);
-                return `
-                <tr class="case-row" data-text="${escapeHtml(c.id.toLowerCase() + ' ' + inputStr.toLowerCase())}">
+              ${latestRun.cases
+                .map((c: any) => {
+                  const inputStr =
+                    typeof c.case.input === "string"
+                      ? c.case.input
+                      : (c.case.input.message ?? JSON.stringify(c.case.input));
+                  return `
+                <tr class="case-row" data-text="${escapeHtml(c.id.toLowerCase() + " " + inputStr.toLowerCase())}">
                   <td>
                     <strong>${escapeHtml(c.id)}</strong>
                   </td>
@@ -302,17 +338,21 @@ function generateDashboardHtml(runs: any[], latestRun: any, baseline: any): stri
                     </div>
                     <div id="details-${escapeHtml(c.id)}" class="case-details">
                       <p><strong>Input:</strong> ${escapeHtml(inputStr)}</p>
-                      ${c.case.expected ? `<p><strong>Expected:</strong> ${escapeHtml(JSON.stringify(c.case.expected))}</p>` : ''}
-                      <p><strong>Actual:</strong> ${escapeHtml(c.output?.output ?? 'none')}</p>
+                      ${c.case.expected ? `<p><strong>Expected:</strong> ${escapeHtml(JSON.stringify(c.case.expected))}</p>` : ""}
+                      <p><strong>Actual:</strong> ${escapeHtml(c.output?.output ?? "none")}</p>
                       <p style="margin-top: 6px;"><strong>Evaluators:</strong></p>
                       <ul style="padding-left: 18px;">
-                        ${Object.entries(c.evaluatorResults).map(([ev, res]: [string, any]) => `
-                          <li>${res.passed ? '✓' : '✗'} ${escapeHtml(ev)}: ${(res.score * 100).toFixed(1)}% - ${escapeHtml(res.reason ?? '')}</li>
-                        `).join('')}
+                        ${Object.entries(c.evaluatorResults)
+                          .map(
+                            ([ev, res]: [string, any]) => `
+                          <li>${res.passed ? "✓" : "✗"} ${escapeHtml(ev)}: ${(res.score * 100).toFixed(1)}% - ${escapeHtml(res.reason ?? "")}</li>
+                        `,
+                          )
+                          .join("")}
                       </ul>
                     </div>
                   </td>
-                  <td style="color: ${c.passed ? 'var(--green)' : 'var(--red)'}; font-weight: 600;">
+                  <td style="color: ${c.passed ? "var(--green)" : "var(--red)"}; font-weight: 600;">
                     ${(c.score * 100).toFixed(1)}%
                   </td>
                   <td>${c.latencyMs}ms</td>
@@ -320,11 +360,14 @@ function generateDashboardHtml(runs: any[], latestRun: any, baseline: any): stri
                     <a href="javascript:void(0)" style="color: var(--primary); font-size: 13px;" onclick="toggleDetails('${escapeHtml(c.id)}')">Inspect</a>
                   </td>
                 </tr>`;
-              }).join('')}
+                })
+                .join("")}
             </tbody>
           </table>
         </div>
-        ` : ''}
+        `
+            : ""
+        }
       </div>
     </div>
   </div>

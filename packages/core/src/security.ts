@@ -1,4 +1,4 @@
-import path from 'node:path';
+import path from "node:path";
 
 /**
  * Common regex patterns for API keys and credentials
@@ -27,7 +27,14 @@ function getEnvSecrets(): string[] {
     return cachedEnvSecrets;
   }
   const secrets: string[] = [];
-  const sensitiveKeys = ['KEY', 'SECRET', 'TOKEN', 'PASSWORD', 'AUTH', 'CREDENTIAL'];
+  const sensitiveKeys = [
+    "KEY",
+    "SECRET",
+    "TOKEN",
+    "PASSWORD",
+    "AUTH",
+    "CREDENTIAL",
+  ];
 
   for (const [key, value] of Object.entries(process.env)) {
     if (!value || value.length < 6) continue;
@@ -44,20 +51,20 @@ function getEnvSecrets(): string[] {
  * Redacts secrets, tokens, and authorization headers from text
  */
 export function redactSecrets(text: string): string {
-  if (!text || typeof text !== 'string') return text;
+  if (!text || typeof text !== "string") return text;
 
   let sanitized = text;
 
   // Redact matches from patterns
   for (const pattern of SENSITIVE_PATTERNS) {
     sanitized = sanitized.replace(pattern, (match) => {
-      if (match.toLowerCase().startsWith('bearer ')) {
-        return 'Bearer [REDACTED]';
+      if (match.toLowerCase().startsWith("bearer ")) {
+        return "Bearer [REDACTED]";
       }
-      if (match.includes(':')) {
+      if (match.includes(":")) {
         return match.replace(/:\s*"[^"]+"/, ': "[REDACTED]"');
       }
-      return '[REDACTED]';
+      return "[REDACTED]";
     });
   }
 
@@ -65,7 +72,7 @@ export function redactSecrets(text: string): string {
   const envSecrets = getEnvSecrets();
   for (const secret of envSecrets) {
     if (sanitized.includes(secret)) {
-      sanitized = sanitized.replaceAll(secret, '[REDACTED]');
+      sanitized = sanitized.replaceAll(secret, "[REDACTED]");
     }
   }
 
@@ -77,24 +84,24 @@ export function redactSecrets(text: string): string {
  */
 export function redactObject<T>(input: T): T {
   if (input === null || input === undefined) return input;
-  if (typeof input === 'string') {
+  if (typeof input === "string") {
     return redactSecrets(input) as unknown as T;
   }
   if (Array.isArray(input)) {
     return input.map((item) => redactObject(item)) as unknown as T;
   }
-  if (typeof input === 'object') {
+  if (typeof input === "object") {
     const result: Record<string, unknown> = {};
     for (const [key, val] of Object.entries(input)) {
       const lowerKey = key.toLowerCase();
       if (
-        lowerKey.includes('key') ||
-        lowerKey.includes('secret') ||
-        lowerKey.includes('token') ||
-        lowerKey.includes('password') ||
-        lowerKey.includes('auth')
+        lowerKey.includes("key") ||
+        lowerKey.includes("secret") ||
+        lowerKey.includes("token") ||
+        lowerKey.includes("password") ||
+        lowerKey.includes("auth")
       ) {
-        result[key] = '[REDACTED]';
+        result[key] = "[REDACTED]";
       } else {
         result[key] = redactObject(val);
       }
@@ -107,13 +114,19 @@ export function redactObject<T>(input: T): T {
 /**
  * Prevent directory traversal attacks by validating that resolved path is inside target dir
  */
-export function safeResolvePath(baseDir: string, relativeOrAbsolutePath: string, allowEscape = false): string {
+export function safeResolvePath(
+  baseDir: string,
+  relativeOrAbsolutePath: string,
+  allowEscape = false,
+): string {
   const normalizedBase = path.resolve(baseDir);
   const resolved = path.resolve(baseDir, relativeOrAbsolutePath);
   if (!allowEscape) {
     const relative = path.relative(normalizedBase, resolved);
     if (relative.startsWith("..") || path.isAbsolute(relative)) {
-      throw new Error(`Path traversal detected: "${relativeOrAbsolutePath}" resolves outside "${baseDir}"`);
+      throw new Error(
+        `Path traversal detected: "${relativeOrAbsolutePath}" resolves outside "${baseDir}"`,
+      );
     }
   }
   return resolved;
@@ -123,11 +136,11 @@ export function safeResolvePath(baseDir: string, relativeOrAbsolutePath: string,
  * Basic HTML escaping for report rendering
  */
 export function escapeHtml(unsafe: string): string {
-  if (typeof unsafe !== 'string') return '';
+  if (typeof unsafe !== "string") return "";
   return unsafe
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }

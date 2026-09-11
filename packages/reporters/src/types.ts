@@ -1,4 +1,4 @@
-import { EvaluationRun, RegressionComparison } from '@ai-eval/core';
+import { EvaluationRun, RegressionComparison } from "@ai-eval/core";
 
 export interface ReporterOutputOptions {
   verbose?: boolean;
@@ -8,6 +8,14 @@ export interface ReporterOutputOptions {
 
 export interface Reporter {
   name: string;
-  format(run: EvaluationRun, regression?: RegressionComparison, options?: ReporterOutputOptions): string;
-  write?(run: EvaluationRun, regression?: RegressionComparison, options?: ReporterOutputOptions): Promise<void> | void;
+  format(
+    run: EvaluationRun,
+    regression?: RegressionComparison,
+    options?: ReporterOutputOptions,
+  ): string;
+  write?(
+    run: EvaluationRun,
+    regression?: RegressionComparison,
+    options?: ReporterOutputOptions,
+  ): Promise<void> | void;
 }

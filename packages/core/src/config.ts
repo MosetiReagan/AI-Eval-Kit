@@ -1,9 +1,9 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import yaml from 'yaml';
-import { z } from 'zod';
-import { ProjectConfig } from './types.js';
-import { ConfigurationError } from './errors.js';
+import fs from "node:fs";
+import path from "node:path";
+import yaml from "yaml";
+import { z } from "zod";
+import { ProjectConfig } from "./types.js";
+import { ConfigurationError } from "./errors.js";
 
 export const PricingConfigSchema = z.object({
   inputPerMillionTokens: z.number().nonnegative().optional(),
@@ -65,7 +65,7 @@ export const EvaluationSpecSchema = z.object({
         name: z.string(),
         file: z.string().optional(),
         template: z.string().optional(),
-      })
+      }),
     )
     .optional(),
   regression: RegressionThresholdsSchema.optional(),
@@ -102,15 +102,15 @@ export const ProjectConfigSchema = z.object({
  */
 export function interpolateEnvVars(content: string): string {
   return content.replace(/\$\{([^}]+)\}/g, (_, expression) => {
-    const [varName, defaultValue] = expression.split(':-');
+    const [varName, defaultValue] = expression.split(":-");
     const val = process.env[varName.trim()];
-    if (val !== undefined && val !== '') {
+    if (val !== undefined && val !== "") {
       return val;
     }
     if (defaultValue !== undefined) {
       return defaultValue;
     }
-    return '';
+    return "";
   });
 }
 
@@ -118,7 +118,7 @@ export function interpolateEnvVars(content: string): string {
  * Finds config file in directory
  */
 export function findConfigFile(cwd: string = process.cwd()): string | null {
-  const candidates = ['ai-eval.yaml', 'ai-eval.yml', 'ai-eval.json'];
+  const candidates = ["ai-eval.yaml", "ai-eval.yml", "ai-eval.json"];
   for (const candidate of candidates) {
     const fullPath = path.join(cwd, candidate);
     if (fs.existsSync(fullPath)) {
@@ -131,16 +131,23 @@ export function findConfigFile(cwd: string = process.cwd()): string | null {
 /**
  * Loads and validates configuration file
  */
-export function loadConfig(configPath?: string, cwd: string = process.cwd()): ProjectConfig {
-  const resolvedPath = configPath ? path.resolve(cwd, configPath) : findConfigFile(cwd);
+export function loadConfig(
+  configPath?: string,
+  cwd: string = process.cwd(),
+): ProjectConfig {
+  const resolvedPath = configPath
+    ? path.resolve(cwd, configPath)
+    : findConfigFile(cwd);
 
   if (!resolvedPath || !fs.existsSync(resolvedPath)) {
-    throw new ConfigurationError(`Configuration file not found. Looked in ${cwd} for ai-eval.yaml, ai-eval.yml, or ai-eval.json.`);
+    throw new ConfigurationError(
+      `Configuration file not found. Looked in ${cwd} for ai-eval.yaml, ai-eval.yml, or ai-eval.json.`,
+    );
   }
 
   let rawContent: string;
   try {
-    rawContent = fs.readFileSync(resolvedPath, 'utf8');
+    rawContent = fs.readFileSync(resolvedPath, "utf8");
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new ConfigurationError(`Failed to read configuration file: ${msg}`);
@@ -150,7 +157,7 @@ export function loadConfig(configPath?: string, cwd: string = process.cwd()): Pr
 
   let parsed: unknown;
   try {
-    if (resolvedPath.endsWith('.json')) {
+    if (resolvedPath.endsWith(".json")) {
       parsed = JSON.parse(interpolated);
     } else {
       parsed = yaml.parse(interpolated);
@@ -163,9 +170,11 @@ export function loadConfig(configPath?: string, cwd: string = process.cwd()): Pr
   const parseResult = ProjectConfigSchema.safeParse(parsed);
   if (!parseResult.success) {
     const formattedErrors = parseResult.error.errors
-      .map((e) => `  - ${e.path.join('.') || 'root'}: ${e.message}`)
-      .join('\n');
-    throw new ConfigurationError(`Configuration validation failed:\n${formattedErrors}`);
+      .map((e) => `  - ${e.path.join(".") || "root"}: ${e.message}`)
+      .join("\n");
+    throw new ConfigurationError(
+      `Configuration validation failed:\n${formattedErrors}`,
+    );
   }
 
   return parseResult.data as ProjectConfig;

@@ -2,7 +2,7 @@
  * AI Eval Kit - Core Type Definitions
  */
 
-export type Role = 'system' | 'user' | 'assistant' | 'tool';
+export type Role = "system" | "user" | "assistant" | "tool";
 
 export interface ChatMessage {
   role: Role;
@@ -112,7 +112,9 @@ export interface EvaluatorContext {
 export interface EvaluatorDefinition {
   name: string;
   description?: string;
-  evaluate(context: EvaluatorContext): Promise<EvaluationResult> | EvaluationResult;
+  evaluate(
+    context: EvaluatorContext,
+  ): Promise<EvaluationResult> | EvaluationResult;
 }
 
 export interface EvalTarget {
@@ -121,16 +123,16 @@ export interface EvalTarget {
 }
 
 export type ErrorCode =
-  | 'EVALUATION_FAILED'
-  | 'PROVIDER_ERROR'
-  | 'TIMEOUT'
-  | 'RATE_LIMITED'
-  | 'INVALID_OUTPUT'
-  | 'INVALID_DATASET'
-  | 'CONFIGURATION_ERROR'
-  | 'AUTHENTICATION_ERROR'
-  | 'REGRESSION_ERROR'
-  | 'UNKNOWN_ERROR';
+  | "EVALUATION_FAILED"
+  | "PROVIDER_ERROR"
+  | "TIMEOUT"
+  | "RATE_LIMITED"
+  | "INVALID_OUTPUT"
+  | "INVALID_DATASET"
+  | "CONFIGURATION_ERROR"
+  | "AUTHENTICATION_ERROR"
+  | "REGRESSION_ERROR"
+  | "UNKNOWN_ERROR";
 
 export interface EvalErrorDetail {
   code: ErrorCode;
@@ -180,7 +182,7 @@ export interface EvaluationRun {
   totalCost: number;
   cases: TestCaseResult[];
   skippedCases?: number;
-  stopReason?: 'failure' | 'completed';
+  stopReason?: "failure" | "completed";
   metadata?: Record<string, unknown>;
 }
 
@@ -265,7 +267,15 @@ export interface ProjectConfig {
 }
 
 export interface ProviderConfig {
-  type: 'openai' | 'openai-compatible' | 'anthropic' | 'gemini' | 'ollama' | 'http' | 'mock' | string;
+  type:
+    | "openai"
+    | "openai-compatible"
+    | "anthropic"
+    | "gemini"
+    | "ollama"
+    | "http"
+    | "mock"
+    | string;
   apiKey?: string;
   baseUrl?: string;
   model?: string;

@@ -1,4 +1,4 @@
-import { Dataset, TestCase } from '@ai-eval/core';
+import { Dataset, TestCase } from "@ai-eval/core";
 
 export interface DatasetFilterOptions {
   tags?: string[];
@@ -21,7 +21,10 @@ function seededRandom(seed: number): () => number {
   };
 }
 
-export function filterDataset(dataset: Dataset, options: DatasetFilterOptions = {}): Dataset {
+export function filterDataset(
+  dataset: Dataset,
+  options: DatasetFilterOptions = {},
+): Dataset {
   let cases: TestCase[] = [...dataset.cases];
 
   // Filter by tags (matches if any tag matches)
@@ -43,8 +46,12 @@ export function filterDataset(dataset: Dataset, options: DatasetFilterOptions = 
   if (options.search) {
     const searchLower = options.search.toLowerCase();
     cases = cases.filter((c) => {
-      const inputStr = typeof c.input === 'string' ? c.input : JSON.stringify(c.input);
-      return c.id.toLowerCase().includes(searchLower) || inputStr.toLowerCase().includes(searchLower);
+      const inputStr =
+        typeof c.input === "string" ? c.input : JSON.stringify(c.input);
+      return (
+        c.id.toLowerCase().includes(searchLower) ||
+        inputStr.toLowerCase().includes(searchLower)
+      );
     });
   }
 

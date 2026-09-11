@@ -1,4 +1,4 @@
-import { Dataset } from '@ai-eval/core';
+import { Dataset } from "@ai-eval/core";
 
 export interface DatasetStats {
   totalCases: number;
@@ -42,14 +42,16 @@ export function validateAndAnalyzeDataset(dataset: Dataset): DatasetStats {
     if (c.expected) {
       hasExpectedCount++;
     } else {
-      warnings.push(`Case "${c.id}" does not specify expected output or assertions`);
+      warnings.push(
+        `Case "${c.id}" does not specify expected output or assertions`,
+      );
     }
 
     if (c.context) {
       hasContextCount++;
     }
 
-    if (typeof c.input === 'string') {
+    if (typeof c.input === "string") {
       inputTypes.string++;
     } else if (c.input && Array.isArray(c.input.messages)) {
       inputTypes.chatMessages++;

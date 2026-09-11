@@ -1,6 +1,12 @@
-import { EvaluatorContext, EvaluationResult, EvaluatorDefinition } from '@ai-eval/core';
+import {
+  EvaluatorContext,
+  EvaluationResult,
+  EvaluatorDefinition,
+} from "@ai-eval/core";
 
-export type EvaluatorFn = (context: EvaluatorContext) => Promise<EvaluationResult> | EvaluationResult;
+export type EvaluatorFn = (
+  context: EvaluatorContext,
+) => Promise<EvaluationResult> | EvaluationResult;
 
 export interface DefineEvaluatorOptions {
   name: string;
@@ -8,7 +14,9 @@ export interface DefineEvaluatorOptions {
   evaluate: EvaluatorFn;
 }
 
-export function defineEvaluator(options: DefineEvaluatorOptions): EvaluatorDefinition {
+export function defineEvaluator(
+  options: DefineEvaluatorOptions,
+): EvaluatorDefinition {
   return {
     name: options.name,
     description: options.description,

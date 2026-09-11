@@ -1,11 +1,11 @@
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
 import {
   EvaluationRun,
   RegressionComparison,
   RegressionThresholds,
   CaseRegression,
-} from './types.js';
+} from "./types.js";
 
 export class BaselineManager {
   private baseDir: string;
@@ -13,7 +13,7 @@ export class BaselineManager {
 
   constructor(baseDir: string = process.cwd()) {
     this.baseDir = baseDir;
-    this.baselinePath = path.join(this.baseDir, '.eval', 'baseline.json');
+    this.baselinePath = path.join(this.baseDir, ".eval", "baseline.json");
   }
 
   saveBaseline(run: EvaluationRun): void {
@@ -21,7 +21,7 @@ export class BaselineManager {
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    fs.writeFileSync(this.baselinePath, JSON.stringify(run, null, 2), 'utf8');
+    fs.writeFileSync(this.baselinePath, JSON.stringify(run, null, 2), "utf8");
   }
 
   getBaseline(): EvaluationRun | null {
@@ -29,7 +29,7 @@ export class BaselineManager {
       return null;
     }
     try {
-      const content = fs.readFileSync(this.baselinePath, 'utf8');
+      const content = fs.readFileSync(this.baselinePath, "utf8");
       return JSON.parse(content) as EvaluationRun;
     } catch {
       return null;
@@ -39,13 +39,13 @@ export class BaselineManager {
   compare(
     currentRun: EvaluationRun,
     baselineRun?: EvaluationRun | null,
-    thresholds?: RegressionThresholds
+    thresholds?: RegressionThresholds,
   ): RegressionComparison {
     const baseline = baselineRun ?? this.getBaseline();
 
     if (!baseline) {
       return {
-        baselineId: 'none',
+        baselineId: "none",
         currentId: currentRun.id,
         baselineScore: currentRun.overallScore,
         currentScore: currentRun.overallScore,
@@ -64,19 +64,28 @@ export class BaselineManager {
       };
     }
 
-    const scoreDrop = Math.max(0, Number((baseline.overallScore - currentRun.overallScore).toFixed(4)));
-    
+    const scoreDrop = Math.max(
+      0,
+      Number((baseline.overallScore - currentRun.overallScore).toFixed(4)),
+    );
+
     let latencyIncreasePct = 0;
     if (baseline.latencyStats.avgMs > 0) {
       latencyIncreasePct = Number(
-        ((currentRun.latencyStats.avgMs - baseline.latencyStats.avgMs) / baseline.latencyStats.avgMs).toFixed(4)
+        (
+          (currentRun.latencyStats.avgMs - baseline.latencyStats.avgMs) /
+          baseline.latencyStats.avgMs
+        ).toFixed(4),
       );
     }
 
     let costIncreasePct = 0;
     if (baseline.totalCost > 0) {
       costIncreasePct = Number(
-        ((currentRun.totalCost - baseline.totalCost) / baseline.totalCost).toFixed(4)
+        (
+          (currentRun.totalCost - baseline.totalCost) /
+          baseline.totalCost
+        ).toFixed(4),
       );
     }
 
@@ -96,7 +105,7 @@ export class BaselineManager {
             baselineScore: baseCase.score,
             currentScore: curCase.score,
             reason: passedRegressed
-              ? 'Passed in baseline, but failed in current run'
+              ? "Passed in baseline, but failed in current run"
               : `Score dropped from ${(baseCase.score * 100).toFixed(1)}% to ${(curCase.score * 100).toFixed(1)}%`,
           });
         }
@@ -108,13 +117,16 @@ export class BaselineManager {
     const effectiveThresholds: RegressionThresholds = {
       maxScoreDrop: thresholds?.maxScoreDrop ?? 0.03, // default 3% max score drop
       maxLatencyIncrease: thresholds?.maxLatencyIncrease ?? 0.25, // default 25% max latency increase
-      maxCostIncrease: thresholds?.maxCostIncrease ?? 0.30, // default 30% max cost increase
+      maxCostIncrease: thresholds?.maxCostIncrease ?? 0.3, // default 30% max cost increase
       maxFailureIncrease: thresholds?.maxFailureIncrease ?? 0,
     };
 
-    if (effectiveThresholds.maxScoreDrop !== undefined && scoreDrop > effectiveThresholds.maxScoreDrop) {
+    if (
+      effectiveThresholds.maxScoreDrop !== undefined &&
+      scoreDrop > effectiveThresholds.maxScoreDrop
+    ) {
       violations.push(
-        `Overall score dropped by ${(scoreDrop * 100).toFixed(1)}% (${(baseline.overallScore * 100).toFixed(1)}% → ${(currentRun.overallScore * 100).toFixed(1)}%), exceeding max allowed drop of ${(effectiveThresholds.maxScoreDrop * 100).toFixed(1)}%`
+        `Overall score dropped by ${(scoreDrop * 100).toFixed(1)}% (${(baseline.overallScore * 100).toFixed(1)}% → ${(currentRun.overallScore * 100).toFixed(1)}%), exceeding max allowed drop of ${(effectiveThresholds.maxScoreDrop * 100).toFixed(1)}%`,
       );
     }
 
@@ -123,7 +135,7 @@ export class BaselineManager {
       latencyIncreasePct > effectiveThresholds.maxLatencyIncrease
     ) {
       violations.push(
-        `Average latency increased by ${(latencyIncreasePct * 100).toFixed(1)}% (${baseline.latencyStats.avgMs}ms → ${currentRun.latencyStats.avgMs}ms), exceeding max allowed increase of ${(effectiveThresholds.maxLatencyIncrease * 100).toFixed(1)}%`
+        `Average latency increased by ${(latencyIncreasePct * 100).toFixed(1)}% (${baseline.latencyStats.avgMs}ms → ${currentRun.latencyStats.avgMs}ms), exceeding max allowed increase of ${(effectiveThresholds.maxLatencyIncrease * 100).toFixed(1)}%`,
       );
     }
 
@@ -132,7 +144,7 @@ export class BaselineManager {
       costIncreasePct > effectiveThresholds.maxCostIncrease
     ) {
       violations.push(
-        `Total cost increased by ${(costIncreasePct * 100).toFixed(1)}% ($${baseline.totalCost} → $${currentRun.totalCost}), exceeding max allowed increase of ${(effectiveThresholds.maxCostIncrease * 100).toFixed(1)}%`
+        `Total cost increased by ${(costIncreasePct * 100).toFixed(1)}% ($${baseline.totalCost} → $${currentRun.totalCost}), exceeding max allowed increase of ${(effectiveThresholds.maxCostIncrease * 100).toFixed(1)}%`,
       );
     }
 
@@ -142,7 +154,7 @@ export class BaselineManager {
       failureIncrease > effectiveThresholds.maxFailureIncrease
     ) {
       violations.push(
-        `Failure count increased by ${failureIncrease} (${baseline.failedCases} → ${currentRun.failedCases}), exceeding max allowed failure increase of ${effectiveThresholds.maxFailureIncrease}`
+        `Failure count increased by ${failureIncrease} (${baseline.failedCases} → ${currentRun.failedCases}), exceeding max allowed failure increase of ${effectiveThresholds.maxFailureIncrease}`,
       );
     }
 

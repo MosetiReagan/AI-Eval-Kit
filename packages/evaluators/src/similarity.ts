@@ -1,5 +1,5 @@
-import { EvaluationResult, EvaluatorContext } from '@ai-eval/core';
-import { defineEvaluator } from './types.js';
+import { EvaluationResult, EvaluatorContext } from "@ai-eval/core";
+import { defineEvaluator } from "./types.js";
 
 export function cosineSimilarity(vecA: number[], vecB: number[]): number {
   if (vecA.length !== vecB.length || vecA.length === 0) return 0;
@@ -24,7 +24,7 @@ export function calculateLocalSimilarity(textA: string, textB: string): number {
   const tokenize = (s: string) =>
     s
       .toLowerCase()
-      .replace(/[^\w\s]/g, ' ')
+      .replace(/[^\w\s]/g, " ")
       .split(/\s+/)
       .filter((w) => w.length > 0);
 
@@ -50,18 +50,21 @@ export function calculateLocalSimilarity(textA: string, textB: string): number {
 }
 
 export const semanticSimilarityEvaluator = defineEvaluator({
-  name: 'semantic_similarity',
-  description: 'Evaluates semantic similarity between output and expected text using embeddings or local vector analysis',
+  name: "semantic_similarity",
+  description:
+    "Evaluates semantic similarity between output and expected text using embeddings or local vector analysis",
   evaluate: async (ctx: EvaluatorContext): Promise<EvaluationResult> => {
     const expected =
       ctx.expected?.exact ??
-      (typeof ctx.expected === 'string' ? ctx.expected : (ctx.expected?.contains as string));
+      (typeof ctx.expected === "string"
+        ? ctx.expected
+        : (ctx.expected?.contains as string));
 
     if (!expected) {
       return {
         score: 0,
         passed: false,
-        reason: 'No expected text specified for semantic similarity evaluation',
+        reason: "No expected text specified for semantic similarity evaluation",
       };
     }
 
@@ -69,14 +72,19 @@ export const semanticSimilarityEvaluator = defineEvaluator({
     const threshold = (ctx.options?.threshold as number) ?? 0.8;
 
     let score = 0;
-    let method = 'local_token_vector';
+    let method = "local_token_vector";
 
-    if (ctx.provider && typeof ctx.provider.embed === 'function') {
+    if (ctx.provider && typeof ctx.provider.embed === "function") {
       try {
         const embeddings = await ctx.provider.embed([actual, String(expected)]);
-        if (embeddings && embeddings.length === 2 && embeddings[0] && embeddings[1]) {
+        if (
+          embeddings &&
+          embeddings.length === 2 &&
+          embeddings[0] &&
+          embeddings[1]
+        ) {
           score = cosineSimilarity(embeddings[0], embeddings[1]);
-          method = 'provider_embedding';
+          method = "provider_embedding";
         }
       } catch {
         score = calculateLocalSimilarity(actual, String(expected));

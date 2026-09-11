@@ -1,4 +1,4 @@
-import crypto from 'node:crypto';
+import crypto from "node:crypto";
 import {
   Dataset,
   EvalInput,
@@ -12,11 +12,17 @@ import {
   TestCase,
   TestCaseResult,
   TokenUsage,
-} from './types.js';
-import { calculateLatencyStats } from './stats.js';
-import { PricingRegistry } from './pricing.js';
-import { ResponseCache } from './cache.js';
-import { TimeoutError, ProviderError, AuthenticationError, InvalidOutputError, InvalidDatasetError } from './errors.js';
+} from "./types.js";
+import { calculateLatencyStats } from "./stats.js";
+import { PricingRegistry } from "./pricing.js";
+import { ResponseCache } from "./cache.js";
+import {
+  TimeoutError,
+  ProviderError,
+  AuthenticationError,
+  InvalidOutputError,
+  InvalidDatasetError,
+} from "./errors.js";
 
 export interface EvaluatorInstance {
   definition: EvaluatorDefinition;
@@ -33,7 +39,7 @@ export class RateLimiter {
 
   constructor(limitPerMinute: number, initialTokens = 1) {
     if (limitPerMinute <= 0) {
-      throw new Error('rateLimitPerMinute must be greater than 0');
+      throw new Error("rateLimitPerMinute must be greater than 0");
     }
     this.maxTokens = limitPerMinute;
     this.refillRatePerMs = limitPerMinute / 60000;
@@ -46,10 +52,16 @@ export class RateLimiter {
       const now = Date.now();
       const elapsed = Math.max(0, now - this.lastRefill);
       this.lastRefill = now;
-      this.tokens = Math.min(this.maxTokens, this.tokens + elapsed * this.refillRatePerMs);
+      this.tokens = Math.min(
+        this.maxTokens,
+        this.tokens + elapsed * this.refillRatePerMs,
+      );
 
       if (this.tokens < 1) {
-        const waitMs = Math.max(1, Math.ceil((1 - this.tokens) / this.refillRatePerMs));
+        const waitMs = Math.max(
+          1,
+          Math.ceil((1 - this.tokens) / this.refillRatePerMs),
+        );
         await new Promise((resolve) => setTimeout(resolve, waitMs));
         this.tokens = 0;
         this.lastRefill = Date.now();
@@ -74,13 +86,17 @@ export interface RunExecutionOptions {
   runnerOptions?: RunnerOptions;
   pricingRegistry?: PricingRegistry;
   cache?: ResponseCache;
-  onProgress?: (completed: number, total: number, currentCase: TestCaseResult) => void;
+  onProgress?: (
+    completed: number,
+    total: number,
+    currentCase: TestCaseResult,
+  ) => void;
 }
 
 export class EvalRunner {
   private async executeWithTimeout<T>(
     fn: (signal: AbortSignal) => Promise<T>,
-    timeoutMs?: number
+    timeoutMs?: number,
   ): Promise<T> {
     const controller = new AbortController();
     if (!timeoutMs || timeoutMs <= 0) {
@@ -91,7 +107,11 @@ export class EvalRunner {
     const timeoutPromise = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
         controller.abort();
-        reject(new TimeoutError(`Target execution exceeded timeout of ${timeoutMs}ms`));
+        reject(
+          new TimeoutError(
+            `Target execution exceeded timeout of ${timeoutMs}ms`,
+          ),
+        );
       }, timeoutMs);
     });
 
@@ -106,7 +126,7 @@ export class EvalRunner {
     fn: () => Promise<T>,
     retries = 0,
     retryDelayMs = 500,
-    rateLimiter?: RateLimiter
+    rateLimiter?: RateLimiter,
   ): Promise<T> {
     let attempt = 0;
     while (true) {
@@ -124,21 +144,25 @@ export class EvalRunner {
         if (err instanceof AuthenticationError) {
           throw err;
         }
-        if (err instanceof InvalidOutputError || err instanceof InvalidDatasetError) {
+        if (
+          err instanceof InvalidOutputError ||
+          err instanceof InvalidDatasetError
+        ) {
           throw err;
         }
         if (attempt > retries) {
           throw err;
         }
         // Exponential backoff with jitter
-        const delay = retryDelayMs * Math.pow(2, attempt - 1) + Math.random() * 100;
+        const delay =
+          retryDelayMs * Math.pow(2, attempt - 1) + Math.random() * 100;
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
 
   private normalizeInput(input: EvalInput | string): EvalInput {
-    if (typeof input === 'string') {
+    if (typeof input === "string") {
       return { message: input };
     }
     return input;
@@ -155,7 +179,7 @@ export class EvalRunner {
       modelName?: string;
       targetVersion?: string;
       rateLimiter?: RateLimiter;
-    }
+    },
   ): Promise<TestCaseResult> {
     const input = this.normalizeInput(testCase.input);
     const pricing = options.pricingRegistry ?? new PricingRegistry();
@@ -169,7 +193,7 @@ export class EvalRunner {
     if (options.cache) {
       cacheKey = options.cache.generateKey([
         target.name,
-        options.targetVersion ?? '1',
+        options.targetVersion ?? "1",
         options.modelName,
         input,
       ]);
@@ -186,10 +210,14 @@ export class EvalRunner {
         const retryDelayMs = options.runnerOptions?.retryDelayMs ?? 500;
 
         output = await this.executeWithRetries(
-          () => this.executeWithTimeout((signal) => target.run({ ...input, signal }), timeoutMs),
+          () =>
+            this.executeWithTimeout(
+              (signal) => target.run({ ...input, signal }),
+              timeoutMs,
+            ),
           retries,
           retryDelayMs,
-          options.rateLimiter
+          options.rateLimiter,
         );
 
         if (options.cache && cacheKey) {
@@ -209,7 +237,8 @@ export class EvalRunner {
       totalTokens: 0,
     };
 
-    const cost = output?.cost ?? pricing.calculateCost(options.modelName, tokenUsage);
+    const cost =
+      output?.cost ?? pricing.calculateCost(options.modelName, tokenUsage);
 
     const evaluatorResults: Record<string, EvaluationResult> = {};
     let totalWeightedScore = 0;
@@ -236,14 +265,17 @@ export class EvalRunner {
         tokenUsage,
         evaluatorResults,
         error: {
-          code: targetError instanceof ProviderError ? 'PROVIDER_ERROR' : 'EVALUATION_FAILED',
+          code:
+            targetError instanceof ProviderError
+              ? "PROVIDER_ERROR"
+              : "EVALUATION_FAILED",
           message: targetError.message,
           stack: targetError.stack,
         },
       };
     }
 
-    const evalOutput = output ?? { output: '' };
+    const evalOutput = output ?? { output: "" };
 
     for (const ev of evaluators) {
       try {
@@ -297,7 +329,7 @@ export class EvalRunner {
 
   async run(options: RunExecutionOptions): Promise<EvaluationRun> {
     const startTime = Date.now();
-    const runId = `run_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
+    const runId = `run_${Date.now()}_${crypto.randomBytes(4).toString("hex")}`;
     const cases = options.dataset.cases;
     const concurrency = Math.max(1, options.runnerOptions?.concurrency ?? 5);
     const rateLimiter = options.runnerOptions?.rateLimitPerMinute
@@ -310,36 +342,46 @@ export class EvalRunner {
     // Queue worker pool with shared abort flag
     let currentIndex = 0;
     let aborted = false;
-    const workers = Array.from({ length: Math.min(concurrency, cases.length) }, async () => {
-      while (currentIndex < cases.length && !aborted) {
-        const index = currentIndex++;
-        const testCase = cases[index];
-        if (!testCase || aborted) break;
+    const workers = Array.from(
+      { length: Math.min(concurrency, cases.length) },
+      async () => {
+        while (currentIndex < cases.length && !aborted) {
+          const index = currentIndex++;
+          const testCase = cases[index];
+          if (!testCase || aborted) break;
 
-        const result = await this.runTestCase(testCase, options.target, options.evaluators, {
-          runnerOptions: options.runnerOptions,
-          pricingRegistry: options.pricingRegistry,
-          cache: options.cache,
-          modelName: options.modelName,
-          targetVersion: options.targetVersion,
-          rateLimiter,
-        });
+          const result = await this.runTestCase(
+            testCase,
+            options.target,
+            options.evaluators,
+            {
+              runnerOptions: options.runnerOptions,
+              pricingRegistry: options.pricingRegistry,
+              cache: options.cache,
+              modelName: options.modelName,
+              targetVersion: options.targetVersion,
+              rateLimiter,
+            },
+          );
 
-        caseResults[index] = result;
-        completedCount++;
-        options.onProgress?.(completedCount, cases.length, result);
+          caseResults[index] = result;
+          completedCount++;
+          options.onProgress?.(completedCount, cases.length, result);
 
-        if (options.runnerOptions?.stopOnFailure && !result.passed) {
-          aborted = true;
-          break;
+          if (options.runnerOptions?.stopOnFailure && !result.passed) {
+            aborted = true;
+            break;
+          }
         }
-      }
-    });
+      },
+    );
 
     await Promise.all(workers);
 
     // Filter out undefined in case of stopOnFailure
-    const finalCases = caseResults.filter((c): c is TestCaseResult => Boolean(c));
+    const finalCases = caseResults.filter((c): c is TestCaseResult =>
+      Boolean(c),
+    );
 
     // Aggregate statistics
     const passedCases = finalCases.filter((c) => c.passed).length;
@@ -365,14 +407,20 @@ export class EvalRunner {
       const name = ev.definition.name;
       const scores = finalCases
         .map((c) => c.evaluatorResults[name]?.score)
-        .filter((s): s is number => typeof s === 'number');
-      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+        .filter((s): s is number => typeof s === "number");
+      const avg =
+        scores.length > 0
+          ? scores.reduce((a, b) => a + b, 0) / scores.length
+          : 0;
       evaluatorScores[name] = Number(avg.toFixed(4));
     }
 
     // Overall score
     const totalScore = finalCases.reduce((sum, c) => sum + c.score, 0);
-    const overallScore = finalCases.length > 0 ? Number((totalScore / finalCases.length).toFixed(4)) : 0;
+    const overallScore =
+      finalCases.length > 0
+        ? Number((totalScore / finalCases.length).toFixed(4))
+        : 0;
 
     return {
       id: runId,
@@ -397,7 +445,7 @@ export class EvalRunner {
       totalCost: Number(totalCost.toFixed(6)),
       cases: finalCases,
       skippedCases: cases.length - finalCases.length,
-      stopReason: aborted ? 'failure' : 'completed',
+      stopReason: aborted ? "failure" : "completed",
     };
   }
 }

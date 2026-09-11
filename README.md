@@ -36,14 +36,14 @@ Pass/fail CI
 
 AI applications are increasingly built into production systems, but developers still lack an engineering workflow for answering critical questions:
 
-* **Is the new model actually better?**
-* **Did the latest prompt change make responses worse?**
-* **Did a code change break an agent workflow?**
-* **Which model performs best for this dataset?**
-* **Which model is cheapest while maintaining quality?**
-* **Are agents following tool instructions reliably?**
-* **Is RAG retrieving the right context without hallucinating?**
-* **Did the latest pull request introduce an AI regression?**
+- **Is the new model actually better?**
+- **Did the latest prompt change make responses worse?**
+- **Did a code change break an agent workflow?**
+- **Which model performs best for this dataset?**
+- **Which model is cheapest while maintaining quality?**
+- **Are agents following tool instructions reliably?**
+- **Is RAG retrieving the right context without hallucinating?**
+- **Did the latest pull request introduce an AI regression?**
 
 AI Eval Kit answers these questions objectively and reproducibly in local development and continuous integration.
 
@@ -51,14 +51,14 @@ AI Eval Kit answers these questions objectively and reproducibly in local develo
 
 ## Features
 
-* 🚀 **Local First & Offline Capable:** Runs entirely from your terminal without requiring a hosted SaaS account or database.
-* 🛡️ **Regression Detection:** Establish performance baselines and automatically fail CI if scores drop, latency spikes, or failure counts increase.
-* 🤖 **Agent Evaluations:** Evaluate tool calls, forbidden tools, call sequences, arguments, and multi-step actions.
-* 🔍 **RAG Metrics:** Measure context relevance, context recall, answer relevance, groundedness, and citation integrity.
-* ⚖️ **LLM-as-a-Judge & Heuristics:** Impartial AI judges with structured JSON scoring, plus fast deterministic checks.
-* 📊 **Multi-Model Benchmarking:** Compare accuracy, latency, token usage, and cost across models side-by-side.
-* 📋 **Multi-Format Reporting:** Terminal UI, GitHub PR Markdown, self-contained HTML reports, JSON, and JUnit XML.
-* 🔒 **Security-First:** Automatic secret redaction for API keys, authorization headers, and path traversal protection.
+- 🚀 **Local First & Offline Capable:** Runs entirely from your terminal without requiring a hosted SaaS account or database.
+- 🛡️ **Regression Detection:** Establish performance baselines and automatically fail CI if scores drop, latency spikes, or failure counts increase.
+- 🤖 **Agent Evaluations:** Evaluate tool calls, forbidden tools, call sequences, arguments, and multi-step actions.
+- 🔍 **RAG Metrics:** Measure context relevance, context recall, answer relevance, groundedness, and citation integrity.
+- ⚖️ **LLM-as-a-Judge & Heuristics:** Impartial AI judges with structured JSON scoring, plus fast deterministic checks.
+- 📊 **Multi-Model Benchmarking:** Compare accuracy, latency, token usage, and cost across models side-by-side.
+- 📋 **Multi-Format Reporting:** Terminal UI, GitHub PR Markdown, self-contained HTML reports, JSON, and JUnit XML.
+- 🔒 **Security-First:** Automatic secret redaction for API keys, authorization headers, and path traversal protection.
 
 ---
 
@@ -164,10 +164,10 @@ evaluations:
       score: 0.85
 
 regression:
-  maxScoreDrop: 0.03          # Max allowed score degradation (3%)
-  maxLatencyIncrease: 0.25    # Max allowed latency increase (25%)
-  maxCostIncrease: 0.30       # Max allowed cost increase (30%)
-  maxFailureIncrease: 0       # 0 additional failures allowed
+  maxScoreDrop: 0.03 # Max allowed score degradation (3%)
+  maxLatencyIncrease: 0.25 # Max allowed latency increase (25%)
+  maxCostIncrease: 0.30 # Max allowed cost increase (30%)
+  maxFailureIncrease: 0 # 0 additional failures allowed
 
 runner:
   concurrency: 5
@@ -226,22 +226,22 @@ ai-eval test --case=refund-policy
 
 AI Eval Kit includes 14 built-in evaluators covering deterministic, structured, quality, RAG, and agent capabilities.
 
-| Evaluator | Category | Description |
-| :--- | :--- | :--- |
-| `exact_match` | Deterministic | Exact string comparison with optional case, trim, and punctuation normalization. |
-| `contains` | Deterministic | Checks for single substring or array of required substrings. |
-| `regex` | Deterministic | Evaluates output against a regular expression pattern. |
-| `json_validity` | Structured | Checks if output contains valid JSON (handles markdown code fences). |
-| `json_schema` | Structured | Validates JSON output against required fields and schemas. |
-| `semantic_similarity` | Quality | Embedding cosine similarity with local vector fallback for offline mode. |
-| `llm_judge` | Quality | Multi-criteria evaluation using an LLM as judge with structured machine-readable scoring. |
-| `criteria` | Quality | Evaluates natural language rules (e.g. conciseness, tone, required facts). |
-| `hallucination` | Groundedness | Checks whether statements made in output are supported by supplied context. |
-| `rag_context_relevance` | RAG | Measures how relevant retrieved context is to user input. |
-| `rag_context_recall` | RAG | Measures whether context contains facts required for expected answer. |
-| `rag_answer_relevance` | RAG | Measures how directly output addresses user input. |
-| `rag_citation` | RAG | Verifies citation presence and correctness (`[Doc 1]`, `[Source]`). |
-| `tool_call` | Agent | Asserts tool execution, forbidden tools, argument schema, and sequences. |
+| Evaluator               | Category      | Description                                                                               |
+| :---------------------- | :------------ | :---------------------------------------------------------------------------------------- |
+| `exact_match`           | Deterministic | Exact string comparison with optional case, trim, and punctuation normalization.          |
+| `contains`              | Deterministic | Checks for single substring or array of required substrings.                              |
+| `regex`                 | Deterministic | Evaluates output against a regular expression pattern.                                    |
+| `json_validity`         | Structured    | Checks if output contains valid JSON (handles markdown code fences).                      |
+| `json_schema`           | Structured    | Validates JSON output against required fields and schemas.                                |
+| `semantic_similarity`   | Quality       | Embedding cosine similarity with local vector fallback for offline mode.                  |
+| `llm_judge`             | Quality       | Multi-criteria evaluation using an LLM as judge with structured machine-readable scoring. |
+| `criteria`              | Quality       | Evaluates natural language rules (e.g. conciseness, tone, required facts).                |
+| `hallucination`         | Groundedness  | Checks whether statements made in output are supported by supplied context.               |
+| `rag_context_relevance` | RAG           | Measures how relevant retrieved context is to user input.                                 |
+| `rag_context_recall`    | RAG           | Measures whether context contains facts required for expected answer.                     |
+| `rag_answer_relevance`  | RAG           | Measures how directly output addresses user input.                                        |
+| `rag_citation`          | RAG           | Verifies citation presence and correctness (`[Doc 1]`, `[Source]`).                       |
+| `tool_call`             | Agent         | Asserts tool execution, forbidden tools, argument schema, and sequences.                  |
 
 ---
 
@@ -273,8 +273,8 @@ return {
   output: "Found 2 orders for customer cust_123",
   tool_calls: [
     { name: "authenticate_session", arguments: { token: "..." } },
-    { name: "search_customer", arguments: { id: "cust_123" } }
-  ]
+    { name: "search_customer", arguments: { id: "cust_123" } },
+  ],
 };
 ```
 
@@ -317,7 +317,7 @@ ai-eval test --ci --baseline
 If a score degrades beyond configured thresholds:
 
 ```text
- ✗ AI REGRESSION DETECTED 
+ ✗ AI REGRESSION DETECTED
 
   • Overall score dropped by 6.7% (94.0% → 87.3%), exceeding max allowed drop of 3.0%
   • Average latency increased by 35.0% (120ms → 162ms), exceeding max allowed increase of 25.0%
@@ -335,9 +335,10 @@ STATUS: FAILED
 ```
 
 Exit codes:
-* `0`: All evaluations passed & no regression detected.
-* `1`: Test failure or regression threshold violated.
-* `2`: Configuration or runtime error.
+
+- `0`: All evaluations passed & no regression detected.
+- `1`: Test failure or regression threshold violated.
+- `2`: Configuration or runtime error.
 
 ### GitHub Actions Workflow (`.github/workflows/test.yml`)
 
@@ -434,9 +435,9 @@ export const sentimentEvaluator = defineEvaluator({
 
 ## Security & Privacy
 
-* **Zero Secret Leaks:** API keys, Authorization headers (`Bearer ...`), and sensitive environment variables are automatically redacted from all CLI output, HTML reports, Markdown logs, and cache stores.
-* **Local Processing:** Datasets and outputs remain on your machine. No telemetry or tracking servers are involved.
-* **Offline Mode:** Built-in deterministic mock provider and local token similarity vector algorithms enable 100% offline evaluation without external network access.
+- **Zero Secret Leaks:** API keys, Authorization headers (`Bearer ...`), and sensitive environment variables are automatically redacted from all CLI output, HTML reports, Markdown logs, and cache stores.
+- **Local Processing:** Datasets and outputs remain on your machine. No telemetry or tracking servers are involved.
+- **Offline Mode:** Built-in deterministic mock provider and local token similarity vector algorithms enable 100% offline evaluation without external network access.
 
 ---
 

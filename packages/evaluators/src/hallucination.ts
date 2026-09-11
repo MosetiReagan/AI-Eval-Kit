@@ -1,6 +1,6 @@
-import { extractJsonFromText } from './json.js';
-import { EvaluationResult, EvaluatorContext } from '@ai-eval/core';
-import { defineEvaluator } from './types.js';
+import { extractJsonFromText } from "./json.js";
+import { EvaluationResult, EvaluatorContext } from "@ai-eval/core";
+import { defineEvaluator } from "./types.js";
 
 export function splitIntoSentences(text: string): string[] {
   return text
@@ -10,13 +10,14 @@ export function splitIntoSentences(text: string): string[] {
 }
 
 export const hallucinationEvaluator = defineEvaluator({
-  name: 'hallucination',
-  description: 'Evaluates whether claims made in the output are grounded in the supplied context',
+  name: "hallucination",
+  description:
+    "Evaluates whether claims made in the output are grounded in the supplied context",
   evaluate: async (ctx: EvaluatorContext): Promise<EvaluationResult> => {
-    let contextStr = '';
-    if (typeof ctx.context === 'string') {
+    let contextStr = "";
+    if (typeof ctx.context === "string") {
       contextStr = ctx.context;
-    } else if (ctx.context && typeof ctx.context === 'object') {
+    } else if (ctx.context && typeof ctx.context === "object") {
       contextStr = JSON.stringify(ctx.context);
     }
 
@@ -24,7 +25,7 @@ export const hallucinationEvaluator = defineEvaluator({
       return {
         score: 0.5,
         passed: true,
-        reason: 'No context supplied to verify hallucinations against',
+        reason: "No context supplied to verify hallucinations against",
         metadata: { confidence: 0.2 },
       };
     }
@@ -34,13 +35,13 @@ export const hallucinationEvaluator = defineEvaluator({
       return {
         score: 1,
         passed: true,
-        reason: 'Output is empty; no claims made',
+        reason: "Output is empty; no claims made",
         metadata: { confidence: 1 },
       };
     }
 
     // If an LLM provider is configured, use rigorous LLM fact checking
-    if (ctx.provider && typeof ctx.provider.chat === 'function') {
+    if (ctx.provider && typeof ctx.provider.chat === "function") {
       try {
         const prompt = `Given the following CONTEXT, check if each claim in the OUTPUT is strictly supported.
 CONTEXT:
@@ -58,22 +59,37 @@ Respond strictly in JSON format:
 }`;
 
         const resp = await ctx.provider.chat([
-          { role: 'system', content: 'You are a strict hallucination detection auditor. Return only valid JSON.' },
-          { role: 'user', content: prompt },
+          {
+            role: "system",
+            content:
+              "You are a strict hallucination detection auditor. Return only valid JSON.",
+          },
+          { role: "user", content: prompt },
         ]);
 
         const extracted = extractJsonFromText(resp.output);
-        if (extracted.success && extracted.data && typeof extracted.data === 'object') {
+        if (
+          extracted.success &&
+          extracted.data &&
+          typeof extracted.data === "object"
+        ) {
           const d = extracted.data as any;
-          const score = typeof d.groundedScore === 'number' ? d.groundedScore : d.passed ? 1 : 0;
+          const score =
+            typeof d.groundedScore === "number"
+              ? d.groundedScore
+              : d.passed
+                ? 1
+                : 0;
           return {
             score: Math.max(0, Math.min(1, Number(score.toFixed(4)))),
-            passed: Boolean(d.passed ?? (score >= 0.8)),
-            reason: d.passed ? 'Output is grounded in context' : `Potential hallucination detected: ${(d.unsupportedStatements || []).length} ungrounded claims`,
+            passed: Boolean(d.passed ?? score >= 0.8),
+            reason: d.passed
+              ? "Output is grounded in context"
+              : `Potential hallucination detected: ${(d.unsupportedStatements || []).length} ungrounded claims`,
             metadata: {
               supportedStatements: d.supportedStatements || [],
               unsupportedStatements: d.unsupportedStatements || [],
-              methodology: 'llm_fact_verification',
+              methodology: "llm_fact_verification",
               confidence: 0.9,
             },
           };
@@ -90,9 +106,15 @@ Respond strictly in JSON format:
     for (const sentence of sentences) {
       const words = sentence
         .toLowerCase()
-        .replace(/[^\w\s]/g, ' ')
+        .replace(/[^\w\s]/g, " ")
         .split(/\s+/)
-        .filter((w) => w.length > 3 && !['this', 'that', 'with', 'from', 'have', 'were', 'will'].includes(w));
+        .filter(
+          (w) =>
+            w.length > 3 &&
+            !["this", "that", "with", "from", "have", "were", "will"].includes(
+              w,
+            ),
+        );
 
       if (words.length === 0) {
         supportedStatements.push(sentence);
@@ -123,7 +145,7 @@ Respond strictly in JSON format:
         groundedScore,
         supportedStatements,
         unsupportedStatements,
-        methodology: 'keyword_overlap_sentence_heuristic',
+        methodology: "keyword_overlap_sentence_heuristic",
         confidence: 0.35,
       },
     };

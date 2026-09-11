@@ -1,4 +1,4 @@
-import { LatencyStats } from './types.js';
+import { LatencyStats } from "./types.js";
 
 export function calculateLatencyStats(latencies: number[]): LatencyStats {
   if (latencies.length === 0) {

@@ -1,6 +1,6 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { EvaluationRun } from './types.js';
+import fs from "node:fs";
+import path from "node:path";
+import { EvaluationRun } from "./types.js";
 
 export interface RunSummary {
   id: string;
@@ -23,7 +23,7 @@ export class HistoryManager {
   private maxRuns: number;
 
   constructor(baseDir: string = process.cwd(), maxRuns = 100) {
-    this.runsDir = path.join(baseDir, '.eval', 'runs');
+    this.runsDir = path.join(baseDir, ".eval", "runs");
     this.maxRuns = maxRuns;
     if (!fs.existsSync(this.runsDir)) {
       try {
@@ -38,9 +38,9 @@ export class HistoryManager {
     if (!fs.existsSync(this.runsDir)) {
       fs.mkdirSync(this.runsDir, { recursive: true });
     }
-    const safeId = run.id.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const safeId = run.id.replace(/[^a-zA-Z0-9_\-]/g, "_");
     const filePath = path.join(this.runsDir, `${safeId}.json`);
-    fs.writeFileSync(filePath, JSON.stringify(run, null, 2), 'utf8');
+    fs.writeFileSync(filePath, JSON.stringify(run, null, 2), "utf8");
 
     if (this.maxRuns > 0) {
       this.prune(this.maxRuns);
@@ -66,7 +66,9 @@ export class HistoryManager {
 
   clear(): number {
     if (!fs.existsSync(this.runsDir)) return 0;
-    const files = fs.readdirSync(this.runsDir).filter((f) => f.endsWith('.json'));
+    const files = fs
+      .readdirSync(this.runsDir)
+      .filter((f) => f.endsWith(".json"));
     let count = 0;
     for (const file of files) {
       try {
@@ -84,13 +86,15 @@ export class HistoryManager {
       return [];
     }
 
-    const files = fs.readdirSync(this.runsDir).filter((f) => f.endsWith('.json'));
+    const files = fs
+      .readdirSync(this.runsDir)
+      .filter((f) => f.endsWith(".json"));
     const summaries: RunSummary[] = [];
 
     for (const file of files) {
       const filePath = path.join(this.runsDir, file);
       try {
-        const content = fs.readFileSync(filePath, 'utf8');
+        const content = fs.readFileSync(filePath, "utf8");
         const run: EvaluationRun = JSON.parse(content);
         summaries.push({
           id: run.id,
@@ -113,24 +117,27 @@ export class HistoryManager {
     }
 
     // Sort descending by timestamp
-    return summaries.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    return summaries.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
   }
 
   getRun(id: string): EvaluationRun | null {
-    if (id === 'latest') {
+    if (id === "latest") {
       const runs = this.listRuns();
       if (runs.length === 0) return null;
       return this.getRun(runs[0]!.id);
     }
 
-    const safeId = id.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const safeId = id.replace(/[^a-zA-Z0-9_\-]/g, "_");
     const filePath = path.join(this.runsDir, `${safeId}.json`);
     if (!fs.existsSync(filePath)) {
       return null;
     }
 
     try {
-      const content = fs.readFileSync(filePath, 'utf8');
+      const content = fs.readFileSync(filePath, "utf8");
       return JSON.parse(content) as EvaluationRun;
     } catch {
       return null;
@@ -138,7 +145,7 @@ export class HistoryManager {
   }
 
   deleteRun(id: string): boolean {
-    const safeId = id.replace(/[^a-zA-Z0-9_\-]/g, '_');
+    const safeId = id.replace(/[^a-zA-Z0-9_\-]/g, "_");
     const filePath = path.join(this.runsDir, `${safeId}.json`);
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);

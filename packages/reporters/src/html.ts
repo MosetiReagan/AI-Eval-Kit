@@ -1,14 +1,20 @@
-import { EvaluationRun, RegressionComparison, escapeHtml } from '@ai-eval/core';
-import { Reporter, ReporterOutputOptions } from './types.js';
+import { EvaluationRun, RegressionComparison, escapeHtml } from "@ai-eval/core";
+import { Reporter, ReporterOutputOptions } from "./types.js";
 
 export class HtmlReporter implements Reporter {
-  public readonly name = 'html';
+  public readonly name = "html";
 
-  format(run: EvaluationRun, regression?: RegressionComparison, _options?: ReporterOutputOptions): string {
-    const isPassed = run.failedCases === 0 && (!regression || !regression.hasRegression);
-    const passRate = ((run.passedCases / (run.totalCases || 1)) * 100).toFixed(1);
+  format(
+    run: EvaluationRun,
+    regression?: RegressionComparison,
+    _options?: ReporterOutputOptions,
+  ): string {
+    const isPassed =
+      run.failedCases === 0 && (!regression || !regression.hasRegression);
+    const passRate = ((run.passedCases / (run.totalCases || 1)) * 100).toFixed(
+      1,
+    );
     const overallPct = (run.overallScore * 100).toFixed(1);
-
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -149,12 +155,12 @@ export class HtmlReporter implements Reporter {
       <div>
         <h1>AI Eval Kit - ${escapeHtml(run.evaluationName)}</h1>
         <div style="font-size: 13px; color: #8b949e; margin-top: 4px;">
-          Project: ${escapeHtml(run.projectName)} &bull; Target: ${escapeHtml(run.targetName)}${run.modelName ? ` (${escapeHtml(run.modelName)})` : ''} &bull; ${new Date(run.timestamp).toLocaleString()}
+          Project: ${escapeHtml(run.projectName)} &bull; Target: ${escapeHtml(run.targetName)}${run.modelName ? ` (${escapeHtml(run.modelName)})` : ""} &bull; ${new Date(run.timestamp).toLocaleString()}
         </div>
       </div>
       <div>
-        <span class="badge ${isPassed ? 'badge-passed' : 'badge-failed'}">
-          ${isPassed ? 'Passed' : 'Failed'}
+        <span class="badge ${isPassed ? "badge-passed" : "badge-failed"}">
+          ${isPassed ? "Passed" : "Failed"}
         </span>
       </div>
     </header>
@@ -165,16 +171,16 @@ export class HtmlReporter implements Reporter {
     <div class="regression-box">
       <div class="regression-title">⚠️ AI Regression Detected Against Baseline</div>
       <ul style="padding-left: 20px; font-size: 14px;">
-        ${regression.violations.map((v) => `<li>${escapeHtml(v)}</li>`).join('')}
+        ${regression.violations.map((v) => `<li>${escapeHtml(v)}</li>`).join("")}
       </ul>
     </div>`
-        : ''
+        : ""
     }
 
     <div class="grid">
       <div class="card">
         <div class="card-title">Overall Score</div>
-        <div class="card-value" style="color: ${run.overallScore >= 0.8 ? 'var(--green)' : 'var(--red)'};">
+        <div class="card-value" style="color: ${run.overallScore >= 0.8 ? "var(--green)" : "var(--red)"};">
           ${overallPct}%
         </div>
         <div class="card-sub">${run.passedCases} passed of ${run.totalCases} cases</div>
@@ -201,7 +207,12 @@ export class HtmlReporter implements Reporter {
       ${Object.entries(run.evaluatorScores)
         .map(([name, score]) => {
           const pct = (score * 100).toFixed(1);
-          const color = score >= 0.8 ? 'var(--green)' : score >= 0.5 ? 'var(--yellow)' : 'var(--red)';
+          const color =
+            score >= 0.8
+              ? "var(--green)"
+              : score >= 0.5
+                ? "var(--yellow)"
+                : "var(--red)";
           return `
         <div class="bar-row">
           <span class="bar-label">${escapeHtml(name)}</span>
@@ -211,7 +222,7 @@ export class HtmlReporter implements Reporter {
           <span class="bar-pct" style="color: ${color};">${pct}%</span>
         </div>`;
         })
-        .join('')}
+        .join("")}
     </div>
 
     <div class="table-container">
@@ -239,12 +250,14 @@ export class HtmlReporter implements Reporter {
           ${run.cases
             .map((c) => {
               const inputStr =
-                typeof c.case.input === 'string' ? c.case.input : c.case.input.message ?? JSON.stringify(c.case.input);
+                typeof c.case.input === "string"
+                  ? c.case.input
+                  : (c.case.input.message ?? JSON.stringify(c.case.input));
               const scorePct = (c.score * 100).toFixed(1);
               return `
-            <tr class="case-row ${c.passed ? 'row-passed' : 'row-failed'}" data-id="${escapeHtml(c.id)}" data-text="${escapeHtml(inputStr.toLowerCase())}">
+            <tr class="case-row ${c.passed ? "row-passed" : "row-failed"}" data-id="${escapeHtml(c.id)}" data-text="${escapeHtml(inputStr.toLowerCase())}">
               <td>
-                <span class="status-dot ${c.passed ? 'dot-pass' : 'dot-fail'}"></span>
+                <span class="status-dot ${c.passed ? "dot-pass" : "dot-fail"}"></span>
                 <strong>${escapeHtml(c.id)}</strong>
               </td>
               <td>
@@ -253,20 +266,20 @@ export class HtmlReporter implements Reporter {
                 </div>
                 <div id="details-${escapeHtml(c.id)}" class="case-details">
                   <p><strong>Input:</strong> ${escapeHtml(inputStr)}</p>
-                  ${c.case.expected ? `<p><strong>Expected:</strong> ${escapeHtml(JSON.stringify(c.case.expected))}</p>` : ''}
-                  <p><strong>Actual:</strong> ${escapeHtml(c.output?.output ?? 'none')}</p>
+                  ${c.case.expected ? `<p><strong>Expected:</strong> ${escapeHtml(JSON.stringify(c.case.expected))}</p>` : ""}
+                  <p><strong>Actual:</strong> ${escapeHtml(c.output?.output ?? "none")}</p>
                   <p style="margin-top: 6px;"><strong>Evaluator Results:</strong></p>
                   <ul style="padding-left: 18px;">
                     ${Object.entries(c.evaluatorResults)
                       .map(
                         ([ev, res]) =>
-                          `<li>${res.passed ? '✅' : '❌'} <strong>${escapeHtml(ev)}</strong>: ${(res.score * 100).toFixed(1)}% - ${escapeHtml(res.reason ?? '')}</li>`
+                          `<li>${res.passed ? "✅" : "❌"} <strong>${escapeHtml(ev)}</strong>: ${(res.score * 100).toFixed(1)}% - ${escapeHtml(res.reason ?? "")}</li>`,
                       )
-                      .join('')}
+                      .join("")}
                   </ul>
                 </div>
               </td>
-              <td style="color: ${c.passed ? 'var(--green)' : 'var(--red)'}; font-weight: 600;">${scorePct}%</td>
+              <td style="color: ${c.passed ? "var(--green)" : "var(--red)"}; font-weight: 600;">${scorePct}%</td>
               <td>${c.latencyMs}ms</td>
               <td>$${c.cost.toFixed(4)}</td>
               <td>
@@ -274,7 +287,7 @@ export class HtmlReporter implements Reporter {
               </td>
             </tr>`;
             })
-            .join('')}
+            .join("")}
         </tbody>
       </table>
     </div>

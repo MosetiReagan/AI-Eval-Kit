@@ -1,13 +1,22 @@
-import { EvaluationRun, RegressionComparison, redactObject } from '@ai-eval/core';
-import { Reporter, ReporterOutputOptions } from './types.js';
+import {
+  EvaluationRun,
+  RegressionComparison,
+  redactObject,
+} from "@ai-eval/core";
+import { Reporter, ReporterOutputOptions } from "./types.js";
 
 export class JsonReporter implements Reporter {
-  public readonly name = 'json';
+  public readonly name = "json";
 
-  format(run: EvaluationRun, regression?: RegressionComparison, _options?: ReporterOutputOptions): string {
+  format(
+    run: EvaluationRun,
+    regression?: RegressionComparison,
+    _options?: ReporterOutputOptions,
+  ): string {
     const payload = {
       run,
-      regression: regression && regression.baselineId !== 'none' ? regression : null,
+      regression:
+        regression && regression.baselineId !== "none" ? regression : null,
       generatedAt: new Date().toISOString(),
     };
 

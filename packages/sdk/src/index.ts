@@ -14,26 +14,25 @@ import {
   BaselineManager,
   HistoryManager,
   ResponseCache,
-} from '@ai-eval/core';
-import { loadDataset } from '@ai-eval/datasets';
-import {
-  defaultEvaluatorRegistry,
-} from '@ai-eval/evaluators';
-import {
-  Provider,
-  defaultProviderRegistry,
-} from '@ai-eval/providers';
+} from "@ai-eval/core";
+import { loadDataset } from "@ai-eval/datasets";
+import { defaultEvaluatorRegistry } from "@ai-eval/evaluators";
+import { Provider, defaultProviderRegistry } from "@ai-eval/providers";
 
-export * from '@ai-eval/core';
-export * from '@ai-eval/datasets';
-export * from '@ai-eval/evaluators';
-export * from '@ai-eval/providers';
-export * from '@ai-eval/reporters';
+export * from "@ai-eval/core";
+export * from "@ai-eval/datasets";
+export * from "@ai-eval/evaluators";
+export * from "@ai-eval/providers";
+export * from "@ai-eval/reporters";
 
 export interface EvaluateOptions {
   target: EvalTarget | ((input: EvalInput) => Promise<EvalOutput | string>);
   dataset: Dataset | string;
-  evaluators: (string | EvaluatorDefinition | { name: string; weight?: number; options?: Record<string, unknown> })[];
+  evaluators: (
+    | string
+    | EvaluatorDefinition
+    | { name: string; weight?: number; options?: Record<string, unknown> }
+  )[];
   projectName?: string;
   evaluationName?: string;
   modelName?: string;
@@ -58,13 +57,13 @@ export interface EvaluateResult {
  */
 export function defineTarget(
   name: string,
-  runFn: (input: EvalInput) => Promise<EvalOutput | string>
+  runFn: (input: EvalInput) => Promise<EvalOutput | string>,
 ): EvalTarget {
   return {
     name,
     async run(input: EvalInput): Promise<EvalOutput> {
       const result = await runFn(input);
-      if (typeof result === 'string') {
+      if (typeof result === "string") {
         return { output: result };
       }
       return result;
@@ -75,12 +74,14 @@ export function defineTarget(
 /**
  * Main programmatic evaluation function
  */
-export async function evaluate(options: EvaluateOptions): Promise<EvaluateResult> {
+export async function evaluate(
+  options: EvaluateOptions,
+): Promise<EvaluateResult> {
   const cwd = options.cwd ?? process.cwd();
 
   // Resolve dataset
   let dataset: Dataset;
-  if (typeof options.dataset === 'string') {
+  if (typeof options.dataset === "string") {
     dataset = await loadDataset(options.dataset, cwd);
   } else {
     dataset = options.dataset;
@@ -88,15 +89,15 @@ export async function evaluate(options: EvaluateOptions): Promise<EvaluateResult
 
   // Resolve target
   let target: EvalTarget;
-  if (typeof options.target === 'function') {
-    target = defineTarget('custom-target', options.target);
+  if (typeof options.target === "function") {
+    target = defineTarget("custom-target", options.target);
   } else {
     target = options.target;
   }
 
   // Resolve provider
   let providerInstance: Provider | undefined;
-  if (typeof options.provider === 'string') {
+  if (typeof options.provider === "string") {
     providerInstance = defaultProviderRegistry.get(options.provider);
   } else if (options.provider) {
     providerInstance = options.provider;
@@ -104,7 +105,7 @@ export async function evaluate(options: EvaluateOptions): Promise<EvaluateResult
 
   // Resolve evaluators
   const evaluatorInstances = options.evaluators.map((ev) => {
-    if (typeof ev === 'string') {
+    if (typeof ev === "string") {
       const def = defaultEvaluatorRegistry.get(ev);
       if (!def) {
         throw new Error(`Evaluator "${ev}" not found in registry`);
@@ -112,7 +113,7 @@ export async function evaluate(options: EvaluateOptions): Promise<EvaluateResult
       return { definition: def, weight: 1 };
     }
 
-    if ('evaluate' in ev) {
+    if ("evaluate" in ev) {
       return { definition: ev, weight: 1 };
     }
 
@@ -125,11 +126,14 @@ export async function evaluate(options: EvaluateOptions): Promise<EvaluateResult
 
   // Setup pricing and cache
   const pricingRegistry = new PricingRegistry(options.pricing);
-  const cache = options.cache !== false ? new ResponseCache(cwd, options.cache ?? true) : undefined;
+  const cache =
+    options.cache !== false
+      ? new ResponseCache(cwd, options.cache ?? true)
+      : undefined;
 
   const runner = new EvalRunner();
   const run = await runner.run({
-    projectName: options.projectName ?? 'ai-eval-project',
+    projectName: options.projectName ?? "ai-eval-project",
     evaluationName: options.evaluationName ?? dataset.name,
     target,
     dataset,
@@ -153,9 +157,9 @@ export async function evaluate(options: EvaluateOptions): Promise<EvaluateResult
 
   if (options.baseline) {
     let baseRun: EvaluationRun | null = null;
-    if (typeof options.baseline === 'string') {
+    if (typeof options.baseline === "string") {
       baseRun = history.getRun(options.baseline);
-    } else if (typeof options.baseline === 'object') {
+    } else if (typeof options.baseline === "object") {
       baseRun = options.baseline;
     } else {
       baseRun = baselineManager.getBaseline();
@@ -185,7 +189,9 @@ export async function compareModels(options: {
       const target: EvalTarget = {
         name: `${item.provider.name}:${item.model}`,
         async run(input: EvalInput): Promise<EvalOutput> {
-          const messages = input.messages ?? [{ role: 'user', content: input.message ?? '' }];
+          const messages = input.messages ?? [
+            { role: "user", content: input.message ?? "" },
+          ];
           const resp = await item.provider.chat(messages);
           return {
             output: resp.output,
@@ -203,7 +209,7 @@ export async function compareModels(options: {
         evaluators: options.evaluators,
         modelName: item.model,
         provider: item.provider,
-        projectName: options.projectName ?? 'model-benchmark',
+        projectName: options.projectName ?? "model-benchmark",
         runnerOptions: options.runnerOptions,
         cwd: options.cwd,
       });
@@ -213,6 +219,6 @@ export async function compareModels(options: {
         provider: item.provider.name,
         run: res.run,
       };
-    })
+    }),
   );
 }

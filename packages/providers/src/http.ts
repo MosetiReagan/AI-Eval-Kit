@@ -1,5 +1,10 @@
-import { ChatMessage, ProviderError, redactSecrets , InvalidOutputError } from '@ai-eval/core';
-import { Provider, ProviderCallOptions, ProviderResponse } from './types.js';
+import {
+  ChatMessage,
+  ProviderError,
+  redactSecrets,
+  InvalidOutputError,
+} from "@ai-eval/core";
+import { Provider, ProviderCallOptions, ProviderResponse } from "./types.js";
 
 export interface HttpProviderOptions {
   name?: string;
@@ -19,17 +24,22 @@ export class HttpProvider implements Provider {
   private outputKey: string;
 
   constructor(options: HttpProviderOptions) {
-    this.name = options.name ?? 'http';
-    this.model = options.model ?? 'custom';
+    this.name = options.name ?? "http";
+    this.model = options.model ?? "custom";
     this.url = options.url;
     this.headers = options.headers ?? {};
-    this.inputKey = options.inputKey ?? 'messages';
-    this.outputKey = options.outputKey ?? 'output';
+    this.inputKey = options.inputKey ?? "messages";
+    this.outputKey = options.outputKey ?? "output";
   }
 
-  async chat(messages: ChatMessage[], options?: ProviderCallOptions): Promise<ProviderResponse> {
+  async chat(
+    messages: ChatMessage[],
+    options?: ProviderCallOptions,
+  ): Promise<ProviderResponse> {
     if (!messages || messages.length === 0) {
-      throw new InvalidOutputError(`${this.name}: messages array must not be empty`);
+      throw new InvalidOutputError(
+        `${this.name}: messages array must not be empty`,
+      );
     }
     const startTime = Date.now();
 
@@ -42,43 +52,60 @@ export class HttpProvider implements Provider {
     let res: Response;
     try {
       res = await fetch(this.url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...this.headers,
         },
         body: JSON.stringify(body),
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      throw new ProviderError(`HTTP provider request failed: ${redactSecrets(msg)}`, undefined, true);
+      throw new ProviderError(
+        `HTTP provider request failed: ${redactSecrets(msg)}`,
+        undefined,
+        true,
+      );
     }
 
     if (!res.ok) {
       const err = await res.text();
-      throw new ProviderError(`HTTP provider returned status ${res.status}: ${redactSecrets(err)}`, res.status);
+      throw new ProviderError(
+        `HTTP provider returned status ${res.status}: ${redactSecrets(err)}`,
+        res.status,
+      );
     }
 
     const json = (await res.json()) as any;
-    let output = '';
+    let output = "";
 
-    if (this.outputKey.includes('.')) {
-      const keys = this.outputKey.split('.');
+    if (this.outputKey.includes(".")) {
+      const keys = this.outputKey.split(".");
       let cur: any = json;
       for (const k of keys) {
-        if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+        if (k === "__proto__" || k === "constructor" || k === "prototype") {
           cur = undefined;
           break;
         }
         cur = cur?.[k];
       }
-      output = typeof cur === 'string' ? cur : JSON.stringify(cur);
+      output = typeof cur === "string" ? cur : JSON.stringify(cur);
     } else {
-      if (this.outputKey === '__proto__' || this.outputKey === 'constructor' || this.outputKey === 'prototype') {
-        output = '';
+      if (
+        this.outputKey === "__proto__" ||
+        this.outputKey === "constructor" ||
+        this.outputKey === "prototype"
+      ) {
+        output = "";
       } else {
         const val = json[this.outputKey];
-        output = typeof val === 'string' ? val : (json.text ?? json.response ?? json.content ?? JSON.stringify(json));
+        output =
+          typeof val === "string"
+            ? val
+            : (json.text ??
+              json.response ??
+              json.content ??
+              JSON.stringify(json));
       }
     }
 

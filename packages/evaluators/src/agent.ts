@@ -1,8 +1,13 @@
-import { EvaluationResult, EvaluatorContext, ToolCall } from '@ai-eval/core';
-import { defineEvaluator } from './types.js';
+import { EvaluationResult, EvaluatorContext, ToolCall } from "@ai-eval/core";
+import { defineEvaluator } from "./types.js";
 
 export interface ToolAssertion {
-  type: 'tool_called' | 'tool_not_called' | 'max_tool_calls' | 'tool_sequence' | 'tool_argument';
+  type:
+    | "tool_called"
+    | "tool_not_called"
+    | "max_tool_calls"
+    | "tool_sequence"
+    | "tool_argument";
   tool?: string;
   value?: number;
   sequence?: string[];
@@ -11,8 +16,9 @@ export interface ToolAssertion {
 }
 
 export const toolCallEvaluator = defineEvaluator({
-  name: 'tool_call',
-  description: 'Evaluates agent tool calling behavior including required tools, forbidden tools, sequences, and argument validity',
+  name: "tool_call",
+  description:
+    "Evaluates agent tool calling behavior including required tools, forbidden tools, sequences, and argument validity",
   evaluate: (ctx: EvaluatorContext): EvaluationResult => {
     // Collect all tool calls from output directly or from steps
     let toolCalls: ToolCall[] = ctx.actual.tool_calls ?? [];
@@ -34,7 +40,8 @@ export const toolCallEvaluator = defineEvaluator({
     const expectedSequence = toolsConfig.sequence;
 
     // Also support assertions list
-    const assertions = (ctx.options?.assertions as ToolAssertion[]) ??
+    const assertions =
+      (ctx.options?.assertions as ToolAssertion[]) ??
       (ctx.expected?.assertions as ToolAssertion[]) ??
       [];
 
@@ -68,7 +75,9 @@ export const toolCallEvaluator = defineEvaluator({
       if (toolCalls.length <= maxCalls) {
         checksPassed++;
       } else {
-        errors.push(`Exceeded max tool calls: expected <= ${maxCalls}, actual = ${toolCalls.length}`);
+        errors.push(
+          `Exceeded max tool calls: expected <= ${maxCalls}, actual = ${toolCalls.length}`,
+        );
       }
     }
 
@@ -85,7 +94,7 @@ export const toolCallEvaluator = defineEvaluator({
         checksPassed++;
       } else {
         errors.push(
-          `Expected tool sequence [${expectedSequence.join(' -> ')}] was not satisfied. Actual: [${calledToolNames.join(' -> ')}]`
+          `Expected tool sequence [${expectedSequence.join(" -> ")}] was not satisfied. Actual: [${calledToolNames.join(" -> ")}]`,
         );
       }
     }
@@ -94,31 +103,40 @@ export const toolCallEvaluator = defineEvaluator({
     for (const assertion of assertions) {
       checksRun++;
       switch (assertion.type) {
-        case 'tool_called':
+        case "tool_called":
           if (assertion.tool && calledToolNames.includes(assertion.tool)) {
             checksPassed++;
           } else {
-            errors.push(`Assertion failed: tool "${assertion.tool}" was not called`);
+            errors.push(
+              `Assertion failed: tool "${assertion.tool}" was not called`,
+            );
           }
           break;
 
-        case 'tool_not_called':
+        case "tool_not_called":
           if (assertion.tool && !calledToolNames.includes(assertion.tool)) {
             checksPassed++;
           } else {
-            errors.push(`Assertion failed: forbidden tool "${assertion.tool}" was called`);
+            errors.push(
+              `Assertion failed: forbidden tool "${assertion.tool}" was called`,
+            );
           }
           break;
 
-        case 'max_tool_calls':
-          if (assertion.value !== undefined && toolCalls.length <= assertion.value) {
+        case "max_tool_calls":
+          if (
+            assertion.value !== undefined &&
+            toolCalls.length <= assertion.value
+          ) {
             checksPassed++;
           } else {
-            errors.push(`Assertion failed: tool calls ${toolCalls.length} exceeded max ${assertion.value}`);
+            errors.push(
+              `Assertion failed: tool calls ${toolCalls.length} exceeded max ${assertion.value}`,
+            );
           }
           break;
 
-        case 'tool_sequence':
+        case "tool_sequence":
           if (assertion.sequence) {
             let idx = 0;
             for (const name of calledToolNames) {
@@ -132,19 +150,27 @@ export const toolCallEvaluator = defineEvaluator({
           }
           break;
 
-        case 'tool_argument':
+        case "tool_argument":
           if (assertion.tool && assertion.argumentKey) {
             const targetCall = toolCalls.find((t) => t.name === assertion.tool);
             if (!targetCall) {
-              errors.push(`Assertion failed: tool "${assertion.tool}" was not called`);
+              errors.push(
+                `Assertion failed: tool "${assertion.tool}" was not called`,
+              );
             } else {
-              const args = typeof targetCall.arguments === 'object' ? (targetCall.arguments as Record<string, unknown>) : {};
+              const args =
+                typeof targetCall.arguments === "object"
+                  ? (targetCall.arguments as Record<string, unknown>)
+                  : {};
               const actualVal = args[assertion.argumentKey];
-              if (JSON.stringify(actualVal) === JSON.stringify(assertion.expectedValue)) {
+              if (
+                JSON.stringify(actualVal) ===
+                JSON.stringify(assertion.expectedValue)
+              ) {
                 checksPassed++;
               } else {
                 errors.push(
-                  `Tool "${assertion.tool}" arg "${assertion.argumentKey}": expected ${JSON.stringify(assertion.expectedValue)}, got ${JSON.stringify(actualVal)}`
+                  `Tool "${assertion.tool}" arg "${assertion.argumentKey}": expected ${JSON.stringify(assertion.expectedValue)}, got ${JSON.stringify(actualVal)}`,
                 );
               }
             }
@@ -161,7 +187,7 @@ export const toolCallEvaluator = defineEvaluator({
       passed,
       reason: passed
         ? `Agent tool evaluation passed (${checksPassed}/${checksRun} assertions satisfied)`
-        : `Agent assertions failed: ${errors.join('; ')}`,
+        : `Agent assertions failed: ${errors.join("; ")}`,
       metadata: {
         calledTools: calledToolNames,
         totalCalls: toolCalls.length,
