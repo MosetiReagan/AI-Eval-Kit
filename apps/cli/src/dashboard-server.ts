@@ -2,7 +2,7 @@ import http from 'node:http';
 import { HistoryManager, BaselineManager, escapeHtml } from '@ai-eval/core';
 import pc from 'picocolors';
 
-export function startDashboardServer(port = 3000, cwd: string = process.cwd()): http.Server {
+export function startDashboardServer(port = 3000, cwd: string = process.cwd(), host = '127.0.0.1'): http.Server {
   const history = new HistoryManager(cwd);
   const baselineManager = new BaselineManager(cwd);
 
@@ -55,8 +55,11 @@ export function startDashboardServer(port = 3000, cwd: string = process.cwd()): 
     res.end('Not Found');
   });
 
-  server.listen(port, () => {
-    console.log(pc.green(`✓ AI Eval Kit Dashboard running at http://localhost:${port}`));
+  server.listen(port, host, () => {
+    console.log(pc.green(`✓ AI Eval Kit Dashboard running at http://${host}:${port}`));
+    if (host === '0.0.0.0') {
+      console.log(pc.yellow('⚠ Warning: Dashboard is bound to all network interfaces (0.0.0.0).'));
+    }
     console.log(pc.dim('Press Ctrl+C to stop.'));
   });
 

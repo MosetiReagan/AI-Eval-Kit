@@ -912,9 +912,10 @@ export default {
     .command('dashboard')
     .description('Launch local web dashboard')
     .option('--port <port>', 'Server port', '3000')
+    .option('--host <host>', 'Server host bind address', '127.0.0.1')
     .action((options) => {
       const port = parseInt(options.port, 10) || 3000;
-      startDashboardServer(port, process.cwd());
+      startDashboardServer(port, process.cwd(), options.host);
     });
 
   return program;
