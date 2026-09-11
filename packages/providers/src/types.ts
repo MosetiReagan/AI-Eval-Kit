@@ -17,6 +17,7 @@ export interface ProviderCallOptions {
   toolChoice?: string | Record<string, unknown>;
   responseFormat?: { type: 'text' | 'json_object' };
   timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 export interface ProviderResponse {

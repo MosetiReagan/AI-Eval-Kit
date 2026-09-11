@@ -42,6 +42,7 @@ export interface EvalInput {
   messages?: ChatMessage[];
   context?: string | Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  signal?: AbortSignal;
   [key: string]: unknown;
 }
 

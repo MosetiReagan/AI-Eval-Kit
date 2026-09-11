@@ -40,22 +40,27 @@ export interface RunExecutionOptions {
 }
 
 export class EvalRunner {
-  private async executeWithTimeout<T>(promise: Promise<T>, timeoutMs?: number): Promise<T> {
+  private async executeWithTimeout<T>(
+    fn: (signal: AbortSignal) => Promise<T>,
+    timeoutMs?: number
+  ): Promise<T> {
+    const controller = new AbortController();
     if (!timeoutMs || timeoutMs <= 0) {
-      return promise;
+      return fn(controller.signal);
     }
 
-    let timer: NodeJS.Timeout;
+    let timer: NodeJS.Timeout | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
+        controller.abort();
         reject(new TimeoutError(`Target execution exceeded timeout of ${timeoutMs}ms`));
       }, timeoutMs);
     });
 
     try {
-      return await Promise.race([promise, timeoutPromise]);
+      return await Promise.race([fn(controller.signal), timeoutPromise]);
     } finally {
-      clearTimeout(timer!);
+      if (timer) clearTimeout(timer);
     }
   }
 
@@ -128,7 +133,7 @@ export class EvalRunner {
         const retryDelayMs = options.runnerOptions?.retryDelayMs ?? 500;
 
         output = await this.executeWithRetries(
-          () => this.executeWithTimeout(target.run(input), timeoutMs),
+          () => this.executeWithTimeout((signal) => target.run({ ...input, signal }), timeoutMs),
           retries,
           retryDelayMs
         );

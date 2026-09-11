@@ -72,7 +72,7 @@ export class AnthropicProvider implements Provider {
         method: 'POST',
         headers,
         body: JSON.stringify(body),
-        signal: controller.signal,
+        signal: options?.signal ? AbortSignal.any([controller.signal, options.signal]) : controller.signal,
       });
       clearTimeout(timeout);
     } catch (err: unknown) {
