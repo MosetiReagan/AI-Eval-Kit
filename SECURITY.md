@@ -17,3 +17,9 @@ AI Eval Kit is designed and treated as security-sensitive developer and CI infra
 If you discover a security vulnerability within AI Eval Kit, please do not disclose it via a public GitHub issue.
 
 Please report vulnerabilities privately to the maintainers at `security@ai-eval-kit.dev` or through GitHub Private Vulnerability Reporting. You will receive a response within 48 hours.
+
+## Target Execution Security Boundary
+
+The evaluation target file specified in `evaluations[].target` (e.g. `src/app.ts`) is imported and executed as code in the Node.js runtime to evaluate its responses, tool calls, latency, and token consumption.
+
+**Security Best Practice:** Only run `ai-eval test` on codebases and target implementations that you trust. Never run evaluations on untrusted repositories without container or sandbox isolation.

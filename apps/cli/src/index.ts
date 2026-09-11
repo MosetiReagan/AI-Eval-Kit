@@ -323,6 +323,10 @@ export default {
       let targetVersion: string | undefined;
       if (evalSpec.target) {
         const targetPath = path.resolve(cwd, evalSpec.target);
+        const rel = path.relative(cwd, targetPath);
+        if (rel.startsWith('..') || path.isAbsolute(rel)) {
+          console.warn(pc.yellow(`  ⚠ Security Warning: Target file "${evalSpec.target}" is outside project root. Only execute targets from trusted sources.`));
+        }
         if (fs.existsSync(targetPath)) {
           try {
             const codeContent = fs.readFileSync(targetPath, 'utf8');
