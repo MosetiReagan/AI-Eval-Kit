@@ -32,6 +32,7 @@ export interface RunExecutionOptions {
   evaluators: EvaluatorInstance[];
   modelName?: string;
   providerName?: string;
+  targetVersion?: string;
   runnerOptions?: RunnerOptions;
   pricingRegistry?: PricingRegistry;
   cache?: ResponseCache;
@@ -95,6 +96,7 @@ export class EvalRunner {
       pricingRegistry?: PricingRegistry;
       cache?: ResponseCache;
       modelName?: string;
+      targetVersion?: string;
     }
   ): Promise<TestCaseResult> {
     const input = this.normalizeInput(testCase.input);
@@ -109,6 +111,7 @@ export class EvalRunner {
     if (options.cache) {
       cacheKey = options.cache.generateKey([
         target.name,
+        options.targetVersion ?? '1',
         options.modelName,
         input,
       ]);
@@ -255,6 +258,7 @@ export class EvalRunner {
           pricingRegistry: options.pricingRegistry,
           cache: options.cache,
           modelName: options.modelName,
+          targetVersion: options.targetVersion,
         });
 
         caseResults[index] = result;

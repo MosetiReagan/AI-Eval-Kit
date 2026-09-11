@@ -320,12 +320,14 @@ export default {
 
       // Resolve Target
       let target;
+      let targetVersion: string | undefined;
       if (evalSpec.target) {
         const targetPath = path.resolve(cwd, evalSpec.target);
         if (fs.existsSync(targetPath)) {
           try {
             const codeContent = fs.readFileSync(targetPath, 'utf8');
             const codeHash = crypto.createHash('sha256').update(codeContent).digest('hex').slice(0, 12);
+            targetVersion = codeHash;
             const imported = await import(`file://${targetPath}?h=${codeHash}`);
             const mod = imported.default || imported;
             target = defineTarget(`${mod.name || evalSpec.name}:${codeHash}`, mod.run || mod);
@@ -357,6 +359,7 @@ export default {
 
       const result = await evaluate({
         target,
+        targetVersion,
         dataset,
         evaluators: evalSpec.evaluators,
         projectName: config.project.name,

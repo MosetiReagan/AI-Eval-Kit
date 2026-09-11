@@ -37,6 +37,7 @@ export interface EvaluateOptions {
   projectName?: string;
   evaluationName?: string;
   modelName?: string;
+  targetVersion?: string;
   provider?: Provider | string;
   runnerOptions?: RunnerOptions;
   pricing?: Record<string, PricingConfig>;
@@ -135,6 +136,7 @@ export async function evaluate(options: EvaluateOptions): Promise<EvaluateResult
     evaluators: evaluatorInstances,
     modelName: options.modelName ?? providerInstance?.model,
     providerName: providerInstance?.name,
+    targetVersion: options.targetVersion,
     runnerOptions: options.runnerOptions,
     pricingRegistry,
     cache,
