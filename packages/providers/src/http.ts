@@ -66,12 +66,20 @@ export class HttpProvider implements Provider {
       const keys = this.outputKey.split('.');
       let cur: any = json;
       for (const k of keys) {
+        if (k === '__proto__' || k === 'constructor' || k === 'prototype') {
+          cur = undefined;
+          break;
+        }
         cur = cur?.[k];
       }
       output = typeof cur === 'string' ? cur : JSON.stringify(cur);
     } else {
-      const val = json[this.outputKey];
-      output = typeof val === 'string' ? val : (json.text ?? json.response ?? json.content ?? JSON.stringify(json));
+      if (this.outputKey === '__proto__' || this.outputKey === 'constructor' || this.outputKey === 'prototype') {
+        output = '';
+      } else {
+        const val = json[this.outputKey];
+        output = typeof val === 'string' ? val : (json.text ?? json.response ?? json.content ?? JSON.stringify(json));
+      }
     }
 
     return {
