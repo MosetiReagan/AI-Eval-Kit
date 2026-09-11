@@ -13,10 +13,12 @@ interface CacheEntry {
 export class ResponseCache {
   private cacheDir: string;
   private enabled: boolean;
+  private maxEntries: number;
 
-  constructor(baseDir: string = process.cwd(), enabled = true) {
+  constructor(baseDir: string = process.cwd(), enabled = true, maxEntries = 1000) {
     this.cacheDir = path.join(baseDir, '.eval', 'cache');
     this.enabled = enabled;
+    this.maxEntries = maxEntries;
     if (this.enabled) {
       try {
         fs.mkdirSync(this.cacheDir, { recursive: true });
@@ -45,6 +47,14 @@ export class ResponseCache {
         return null;
       }
 
+      // Update access time for LRU tracking
+      try {
+        const now = new Date();
+        fs.utimesSync(filePath, now, now);
+      } catch {
+        // Ignore utimes failures
+      }
+
       return entry.output;
     } catch {
       return null;
@@ -63,8 +73,45 @@ export class ResponseCache {
         ttlMs,
       };
       fs.writeFileSync(filePath, JSON.stringify(entry, null, 2), 'utf8');
+
+      if (this.maxEntries > 0) {
+        this.prune(this.maxEntries);
+      }
     } catch {
       // Ignore write errors in cache
+    }
+  }
+
+  prune(maxEntries: number): number {
+    if (!fs.existsSync(this.cacheDir)) return 0;
+    try {
+      const files = fs.readdirSync(this.cacheDir).filter((f) => f.endsWith('.json'));
+      if (files.length <= maxEntries) return 0;
+
+      const fileStats = files.map((file) => {
+        const p = path.join(this.cacheDir, file);
+        return {
+          path: p,
+          mtime: fs.statSync(p).mtimeMs,
+        };
+      });
+
+      // Sort ascending (oldest access time first)
+      fileStats.sort((a, b) => a.mtime - b.mtime);
+
+      const deleteCount = fileStats.length - maxEntries;
+      let deleted = 0;
+      for (let i = 0; i < deleteCount; i++) {
+        try {
+          fs.unlinkSync(fileStats[i]!.path);
+          deleted++;
+        } catch {
+          // Ignore
+        }
+      }
+      return deleted;
+    } catch {
+      return 0;
     }
   }
 

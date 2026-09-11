@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { EvalRunner, ResponseCache, ProviderError, AuthenticationError, RateLimiter } from '@ai-eval/core';
+import { EvalRunner, ResponseCache, HistoryManager, ProviderError, AuthenticationError, RateLimiter } from '@ai-eval/core';
 import { exactMatchEvaluator, containsEvaluator } from '@ai-eval/evaluators';
 import { MockProvider } from '@ai-eval/providers';
 import fs from 'node:fs';
@@ -59,6 +59,76 @@ describe('EvalRunner & Caching', () => {
 
     cache.clear();
     expect(cache.get(key)).toBeNull();
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('evicts least-recently-used cache entries when maxEntries is exceeded', async () => {
+    const tmpDir = path.resolve(__dirname, '../.tmp-cache-lru-test');
+    fs.mkdirSync(tmpDir, { recursive: true });
+
+    // Cache with maxEntries = 2
+    const cache = new ResponseCache(tmpDir, true, 2);
+    const k1 = cache.generateKey(['item-1']);
+    const k2 = cache.generateKey(['item-2']);
+    const k3 = cache.generateKey(['item-3']);
+
+    cache.set(k1, { output: 'out-1' });
+    await new Promise((r) => setTimeout(r, 20));
+    cache.set(k2, { output: 'out-2' });
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Access k1 to make k2 the least recently used
+    expect(cache.get(k1)?.output).toBe('out-1');
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Adding 3rd item must evict k2 (oldest mtime)
+    cache.set(k3, { output: 'out-3' });
+
+    expect(cache.get(k1)?.output).toBe('out-1');
+    expect(cache.get(k3)?.output).toBe('out-3');
+    expect(cache.get(k2)).toBeNull();
+
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('prunes history runs when maxRuns is exceeded and supports clear', async () => {
+    const tmpDir = path.resolve(__dirname, '../.tmp-history-test');
+    fs.mkdirSync(tmpDir, { recursive: true });
+
+    const history = new HistoryManager(tmpDir, 2); // maxRuns = 2
+    const makeRun = (id: string, timeOffsetMs: number) => ({
+      id,
+      projectName: 'p',
+      evaluationName: 'e',
+      timestamp: new Date(Date.now() + timeOffsetMs).toISOString(),
+      durationMs: 100,
+      targetName: 't',
+      totalCases: 1,
+      passedCases: 1,
+      failedCases: 0,
+      overallScore: 1,
+      evaluatorScores: {},
+      latencyStats: { avgMs: 10, medianMs: 10, p95Ms: 10, p99Ms: 10, minMs: 10, maxMs: 10 },
+      totalTokens: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+      totalCost: 0,
+      cases: [],
+    });
+
+    history.saveRun(makeRun('run-1', -2000));
+    history.saveRun(makeRun('run-2', -1000));
+    history.saveRun(makeRun('run-3', 0));
+
+    // Only 2 newest runs should remain
+    const runs = history.listRuns();
+    expect(runs.length).toBe(2);
+    expect(runs.map((r) => r.id)).toEqual(['run-3', 'run-2']);
+    expect(history.getRun('run-1')).toBeNull();
+
+    // Clear all runs
+    const cleared = history.clear();
+    expect(cleared).toBe(2);
+    expect(history.listRuns().length).toBe(0);
 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });

@@ -20,9 +20,11 @@ export interface RunSummary {
 
 export class HistoryManager {
   private runsDir: string;
+  private maxRuns: number;
 
-  constructor(baseDir: string = process.cwd()) {
+  constructor(baseDir: string = process.cwd(), maxRuns = 100) {
     this.runsDir = path.join(baseDir, '.eval', 'runs');
+    this.maxRuns = maxRuns;
     if (!fs.existsSync(this.runsDir)) {
       try {
         fs.mkdirSync(this.runsDir, { recursive: true });
@@ -39,7 +41,42 @@ export class HistoryManager {
     const safeId = run.id.replace(/[^a-zA-Z0-9_\-]/g, '_');
     const filePath = path.join(this.runsDir, `${safeId}.json`);
     fs.writeFileSync(filePath, JSON.stringify(run, null, 2), 'utf8');
+
+    if (this.maxRuns > 0) {
+      this.prune(this.maxRuns);
+    }
+
     return filePath;
+  }
+
+  prune(keep: number): number {
+    if (!fs.existsSync(this.runsDir)) return 0;
+    const summaries = this.listRuns();
+    if (summaries.length <= keep) return 0;
+
+    const toDelete = summaries.slice(keep);
+    let deletedCount = 0;
+    for (const run of toDelete) {
+      if (this.deleteRun(run.id)) {
+        deletedCount++;
+      }
+    }
+    return deletedCount;
+  }
+
+  clear(): number {
+    if (!fs.existsSync(this.runsDir)) return 0;
+    const files = fs.readdirSync(this.runsDir).filter((f) => f.endsWith('.json'));
+    let count = 0;
+    for (const file of files) {
+      try {
+        fs.unlinkSync(path.join(this.runsDir, file));
+        count++;
+      } catch {
+        // Ignore
+      }
+    }
+    return count;
   }
 
   listRuns(): RunSummary[] {

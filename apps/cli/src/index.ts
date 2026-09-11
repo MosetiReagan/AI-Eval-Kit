@@ -681,12 +681,32 @@ export default {
   // ----------------------------------------------------
   // ai-eval history
   // ----------------------------------------------------
-  program
+  const historyCmd = program
     .command('history')
-    .description('Show evaluation runs history')
-    .action(async () => {
+    .description('Show and manage evaluation runs history')
+    .option('--clear', 'Delete all recorded runs from history')
+    .option('--prune <keep>', 'Prune history keeping the N newest runs')
+    .action(async (options: { clear?: boolean; prune?: string }) => {
       const cwd = process.cwd();
       const history = new HistoryManager(cwd);
+
+      if (options.clear) {
+        const count = history.clear();
+        console.log(pc.green(`\nCleared ${count} run(s) from history.\n`));
+        return;
+      }
+
+      if (options.prune) {
+        const keep = parseInt(options.prune, 10);
+        if (isNaN(keep) || keep < 0) {
+          console.error(pc.red(`\nInvalid keep count: "${options.prune}". Must be a non-negative integer.\n`));
+          process.exit(1);
+        }
+        const count = history.prune(keep);
+        console.log(pc.green(`\nPruned history: kept ${keep} runs, removed ${count} older run(s).\n`));
+        return;
+      }
+
       const runs = history.listRuns();
 
       if (runs.length === 0) {
@@ -716,6 +736,32 @@ export default {
         );
       }
       console.log('');
+    });
+
+  historyCmd
+    .command('clear')
+    .description('Delete all recorded runs from history')
+    .action(() => {
+      const cwd = process.cwd();
+      const history = new HistoryManager(cwd);
+      const count = history.clear();
+      console.log(pc.green(`\nCleared ${count} run(s) from history.\n`));
+    });
+
+  historyCmd
+    .command('prune')
+    .description('Prune history keeping the N newest runs')
+    .option('--keep <number>', 'Number of newest runs to keep', '50')
+    .action((opts: { keep: string }) => {
+      const cwd = process.cwd();
+      const history = new HistoryManager(cwd);
+      const keep = parseInt(opts.keep, 10);
+      if (isNaN(keep) || keep < 0) {
+        console.error(pc.red(`\nInvalid keep count: "${opts.keep}". Must be a non-negative integer.\n`));
+        process.exit(1);
+      }
+      const count = history.prune(keep);
+      console.log(pc.green(`\nPruned history: kept ${keep} runs, removed ${count} older run(s).\n`));
     });
 
   // ----------------------------------------------------
