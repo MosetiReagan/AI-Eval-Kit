@@ -63,9 +63,20 @@ export class PricingRegistry {
       };
     }
 
-    // Check known default models
-    for (const [key, price] of Object.entries(DEFAULT_MODEL_PRICING)) {
+    // Check exact match first
+    if (DEFAULT_MODEL_PRICING[normalized]) {
+      const price = DEFAULT_MODEL_PRICING[normalized]!;
+      return {
+        inputPerMillion: price.input,
+        outputPerMillion: price.output,
+      };
+    }
+
+    // Check longest prefix/substring match second (e.g. gpt-4o-mini before gpt-4o)
+    const sortedKeys = Object.keys(DEFAULT_MODEL_PRICING).sort((a, b) => b.length - a.length);
+    for (const key of sortedKeys) {
       if (normalized.includes(key)) {
+        const price = DEFAULT_MODEL_PRICING[key]!;
         return {
           inputPerMillion: price.input,
           outputPerMillion: price.output,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
-import { interpolateEnvVars, loadConfig } from '@ai-eval/core';
+import { interpolateEnvVars, loadConfig, PricingRegistry } from '@ai-eval/core';
 
 describe('Configuration System', () => {
   it('interpolates environment variables with defaults', () => {
@@ -20,5 +20,16 @@ describe('Configuration System', () => {
 
   it('throws ConfigurationError on missing file', () => {
     expect(() => loadConfig('non-existent-config.yaml')).toThrow();
+  });
+
+  it('PricingRegistry matches exact model and longest prefix correctly', () => {
+    const registry = new PricingRegistry();
+    const mini = registry.getPricing('gpt-4o-mini');
+    expect(mini.inputPerMillion).toBe(0.15);
+    expect(mini.outputPerMillion).toBe(0.6);
+
+    const standard = registry.getPricing('gpt-4o');
+    expect(standard.inputPerMillion).toBe(2.5);
+    expect(standard.outputPerMillion).toBe(10.0);
   });
 });
