@@ -1,0 +1,17 @@
+name: structured-output-dataset
+cases:
+  - id: extract-user-profile
+    input: "Extract user profile: Alice Smith, age 30, email alice@example.com"
+    expected:
+      jsonSchema:
+        required:
+          - name
+          - age
+          - email
+        properties:
+          name:
+            type: string
+          age:
+            type: number
+          email:
+            type: string

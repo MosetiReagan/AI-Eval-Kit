@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true
+  },
+  "include": [],
+  "references": [
+    { "path": "./packages/core" },
+    { "path": "./packages/providers" },
+    { "path": "./packages/evaluators" },
+    { "path": "./packages/datasets" },
+    { "path": "./packages/reporters" },
+    { "path": "./packages/sdk" },
+    { "path": "./apps/cli" }
+  ]
+}

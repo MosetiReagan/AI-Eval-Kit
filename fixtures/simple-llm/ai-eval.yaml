@@ -1,0 +1,9 @@
+project:
+  name: simple-llm-fixture
+evaluations:
+  - name: greeting-eval
+    dataset: ./dataset.yaml
+    target: ./target.ts
+    evaluators:
+      - exact_match
+      - contains

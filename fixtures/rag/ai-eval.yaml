@@ -1,0 +1,12 @@
+project:
+  name: rag-fixture
+evaluations:
+  - name: rag-knowledge-eval
+    dataset: ./dataset.yaml
+    target: ./target.ts
+    evaluators:
+      - rag_context_relevance
+      - rag_context_recall
+      - rag_answer_relevance
+      - rag_citation
+      - hallucination

@@ -1,0 +1,22 @@
+name: agent-dataset
+cases:
+  - id: lookup-customer
+    input: "Look up order details for user user_123"
+    expected:
+      tools:
+        required:
+          - search_customer
+        forbidden:
+          - delete_customer
+        maxCalls: 3
+  - id: update-address
+    input: "Update shipping address for user user_456"
+    expected:
+      tools:
+        required:
+          - search_customer
+          - update_shipping_address
+        sequence:
+          - search_customer
+          - update_shipping_address
+        maxCalls: 4

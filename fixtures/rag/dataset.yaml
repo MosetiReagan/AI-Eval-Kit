@@ -1,0 +1,17 @@
+name: rag-dataset
+cases:
+  - id: rag-mars-rover
+    input: "When did Curiosity rover land on Mars?"
+    context: "NASA's Curiosity rover landed on Mars inside Gale Crater on August 6, 2012. Source: [Doc 1]."
+    expected:
+      exact: "August 6, 2012"
+      contains:
+        - "August 6, 2012"
+        - "[Doc 1]"
+  - id: rag-speed-of-light
+    input: "What is the speed of light in vacuum?"
+    context: "The speed of light in a vacuum is approximately 299,792,458 meters per second. Source: [Doc 2]."
+    expected:
+      contains:
+        - "299,792,458"
+        - "[Doc 2]"

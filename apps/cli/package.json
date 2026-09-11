@@ -1,0 +1,31 @@
+{
+  "name": "ai-eval",
+  "version": "1.0.0",
+  "description": "CLI tool for AI Eval Kit",
+  "bin": {
+    "ai-eval": "./dist/bin.js"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsup src/bin.ts src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/bin.ts src/index.ts --format cjs,esm --dts --watch"
+  },
+  "dependencies": {
+    "@ai-eval/core": "workspace:*",
+    "@ai-eval/datasets": "workspace:*",
+    "@ai-eval/evaluators": "workspace:*",
+    "@ai-eval/providers": "workspace:*",
+    "@ai-eval/reporters": "workspace:*",
+    "ai-eval-kit": "workspace:*",
+    "commander": "^13.1.0",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.7.0",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.2"
+  }
+}

@@ -1,0 +1,8 @@
+project:
+  name: multi-turn-fixture
+evaluations:
+  - name: multi-turn-eval
+    dataset: ./dataset.yaml
+    target: ./target.ts
+    evaluators:
+      - contains

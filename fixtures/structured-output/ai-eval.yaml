@@ -1,0 +1,9 @@
+project:
+  name: structured-output-fixture
+evaluations:
+  - name: json-schema-eval
+    dataset: ./dataset.yaml
+    target: ./target.ts
+    evaluators:
+      - json_validity
+      - json_schema

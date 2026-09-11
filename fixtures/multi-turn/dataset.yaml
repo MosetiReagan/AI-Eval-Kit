@@ -1,0 +1,15 @@
+name: multi-turn-dataset
+cases:
+  - id: conversation-turn-2
+    input:
+      messages:
+        - role: user
+          content: "I want to return an item."
+        - role: assistant
+          content: "I can help with that. What is your order number?"
+        - role: user
+          content: "My order is #5512."
+    expected:
+      contains:
+        - "#5512"
+        - "return label"

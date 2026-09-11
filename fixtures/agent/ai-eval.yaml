@@ -1,0 +1,8 @@
+project:
+  name: agent-fixture
+evaluations:
+  - name: agent-workflow-eval
+    dataset: ./dataset.yaml
+    target: ./target.ts
+    evaluators:
+      - tool_call

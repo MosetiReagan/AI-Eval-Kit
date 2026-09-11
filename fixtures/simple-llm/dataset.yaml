@@ -1,0 +1,10 @@
+name: simple-llm-dataset
+cases:
+  - id: greet-01
+    input: "Hello"
+    expected:
+      contains: "Hello"
+  - id: calc-01
+    input: "What is 2+2?"
+    expected:
+      exact: "4"

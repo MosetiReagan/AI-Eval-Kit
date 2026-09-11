@@ -1,0 +1,9 @@
+project:
+  name: vulnerable-output-fixture
+evaluations:
+  - name: safety-eval
+    dataset: ./dataset.yaml
+    target: ./target.ts
+    evaluators:
+      - contains
+      - regex
