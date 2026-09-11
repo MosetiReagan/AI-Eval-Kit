@@ -218,9 +218,9 @@ export class HtmlReporter implements Reporter {
       <div class="table-header">
         <div style="font-weight: 600; color: var(--heading);">Test Case Explorer (${run.totalCases} cases)</div>
         <div style="display: flex; gap: 8px;">
-          <button class="filter-btn active" onclick="filterCases('all')">All (${run.totalCases})</button>
-          <button class="filter-btn" onclick="filterCases('passed')">Passed (${run.passedCases})</button>
-          <button class="filter-btn" onclick="filterCases('failed')">Failed (${run.failedCases})</button>
+          <button class="filter-btn active" data-filter="all">All (${run.totalCases})</button>
+          <button class="filter-btn" data-filter="passed">Passed (${run.passedCases})</button>
+          <button class="filter-btn" data-filter="failed">Failed (${run.failedCases})</button>
           <input type="text" class="search" placeholder="Search cases..." oninput="searchCases(this.value)">
         </div>
       </div>
@@ -270,7 +270,7 @@ export class HtmlReporter implements Reporter {
               <td>${c.latencyMs}ms</td>
               <td>$${c.cost.toFixed(4)}</td>
               <td>
-                <span class="toggle-link" onclick="toggleDetails('${escapeHtml(c.id)}')">Inspect</span>
+                <span class="toggle-link" data-case-id="${escapeHtml(c.id)}">Inspect</span>
               </td>
             </tr>`;
             })
@@ -288,10 +288,30 @@ export class HtmlReporter implements Reporter {
     let currentFilter = 'all';
     let searchQuery = '';
 
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentFilter = btn.getAttribute('data-filter') || 'all';
+          applyFilters();
+        });
+      });
+
+      document.addEventListener('click', (e) => {
+        const target = e.target;
+        if (target && target.classList.contains('toggle-link')) {
+          const row = target.closest('tr');
+          const details = row ? row.querySelector('.case-details') : null;
+          if (details) {
+            details.style.display = details.style.display === 'block' ? 'none' : 'block';
+          }
+        }
+      });
+    });
+
     function filterCases(filter) {
       currentFilter = filter;
-      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-      event.target.classList.add('active');
       applyFilters();
     }
 
@@ -309,18 +329,11 @@ export class HtmlReporter implements Reporter {
           (currentFilter === 'passed' && isPassed) ||
           (currentFilter === 'failed' && !isPassed);
 
-        const text = row.getAttribute('data-text') + ' ' + row.getAttribute('data-id');
+        const text = (row.getAttribute('data-text') || '') + ' ' + (row.getAttribute('data-id') || '');
         const matchesSearch = !searchQuery || text.includes(searchQuery);
 
         row.style.display = matchesFilter && matchesSearch ? '' : 'none';
       });
-    }
-
-    function toggleDetails(id) {
-      const el = document.getElementById('details-' + id);
-      if (el) {
-        el.style.display = el.style.display === 'block' ? 'none' : 'block';
-      }
     }
   </script>
 </body>
