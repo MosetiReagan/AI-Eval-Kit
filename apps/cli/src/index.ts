@@ -29,7 +29,8 @@ export function createCli(): Command {
     .description(
       "AI Eval Kit: Open-source evaluations, regression testing, and benchmarking for AI applications",
     )
-    .version("1.0.0");
+    .version("1.0.0")
+    .option("-c, --config <file>", "Path to configuration file");
 
   // ----------------------------------------------------
   // ai-eval init
@@ -289,9 +290,13 @@ export default {
   // ----------------------------------------------------
   const runAction = async (evalName?: string, options: any = {}) => {
     const cwd = process.cwd();
+    const configOpt = options.config || program.opts().config;
+    const configPath = configOpt ? path.resolve(cwd, configOpt) : undefined;
+    const projectDir = configPath ? path.dirname(configPath) : cwd;
+
     let config;
     try {
-      config = loadConfig(undefined, cwd);
+      config = loadConfig(configPath, cwd);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error(pc.red(`\nConfiguration Error: ${msg}\n`));
@@ -313,7 +318,7 @@ export default {
 
     const format = options.format || "terminal";
     const reporter = createReporter(format);
-    const baselineManager = new BaselineManager(cwd);
+    const baselineManager = new BaselineManager(projectDir);
     const isCi = Boolean(options.ci);
 
     let hasAnyFailures = false;
@@ -327,10 +332,10 @@ export default {
       }
 
       // Load Dataset
-      const datasetPath = path.resolve(cwd, evalSpec.dataset);
+      const datasetPath = path.resolve(projectDir, evalSpec.dataset);
       let dataset;
       try {
-        dataset = await loadDataset(datasetPath, cwd);
+        dataset = await loadDataset(datasetPath, projectDir);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(
@@ -351,8 +356,8 @@ export default {
       let target;
       let targetVersion: string | undefined;
       if (evalSpec.target) {
-        const targetPath = path.resolve(cwd, evalSpec.target);
-        const rel = path.relative(cwd, targetPath);
+        const targetPath = path.resolve(projectDir, evalSpec.target);
+        const rel = path.relative(projectDir, targetPath);
         if (rel.startsWith("..") || path.isAbsolute(rel)) {
           console.warn(
             pc.yellow(
@@ -441,7 +446,7 @@ export default {
         cache: options.cache !== false && config.cache?.enabled !== false,
         baseline: checkBaseline,
         thresholds: evalSpec.regression || config.regression,
-        cwd,
+        cwd: projectDir,
         onProgress: (completed, total) => {
           if (format === "terminal" && !options.quiet && !options.verbose) {
             process.stdout.write(
@@ -516,6 +521,7 @@ export default {
     .option("--case <caseId>", "Filter dataset by specific case ID")
     .option("--no-cache", "Disable response caching")
     .option("--concurrency <n>", "Override execution concurrency")
+    .option("-c, --config <file>", "Path to configuration file")
     .option("--quiet", "Minimal output")
     .option("--verbose", "Show full failure details and stack traces")
     .action(runAction);
@@ -528,13 +534,18 @@ export default {
     .description(
       "Validate configuration file, evaluators, datasets, and targets",
     )
-    .action(async () => {
+    .option("-c, --config <file>", "Path to configuration file")
+    .action(async (options: { config?: string } = {}) => {
       const cwd = process.cwd();
+      const configOpt = options.config || program.opts().config;
+      const configPath = configOpt ? path.resolve(cwd, configOpt) : undefined;
+      const projectDir = configPath ? path.dirname(configPath) : cwd;
+
       console.log(pc.cyan("\nValidating AI Eval Kit project...\n"));
 
       let config;
       try {
-        config = loadConfig(undefined, cwd);
+        config = loadConfig(configPath, cwd);
         console.log(
           pc.green(
             `✓ Configuration: Valid (${config.evaluations.length} evaluations defined)`,
@@ -551,9 +562,9 @@ export default {
         console.log(pc.bold(`\nEvaluation: ${ev.name}`));
 
         // Dataset check
-        const datasetPath = path.resolve(cwd, ev.dataset);
+        const datasetPath = path.resolve(projectDir, ev.dataset);
         try {
-          const ds = await loadDataset(datasetPath, cwd);
+          const ds = await loadDataset(datasetPath, projectDir);
           const stats = validateAndAnalyzeDataset(ds);
           console.log(
             pc.green(`  ✓ Dataset: "${ds.name}" (${stats.totalCases} cases)`),
@@ -570,7 +581,7 @@ export default {
 
         // Target check
         if (ev.target) {
-          const targetPath = path.resolve(cwd, ev.target);
+          const targetPath = path.resolve(projectDir, ev.target);
           if (fs.existsSync(targetPath)) {
             console.log(pc.green(`  ✓ Target file exists: ${ev.target}`));
           } else {
@@ -603,69 +614,82 @@ export default {
   program
     .command("baseline [action] [runId]")
     .description("Manage performance baselines (show, set, clear)")
-    .action(async (action = "show", runId?: string) => {
-      const cwd = process.cwd();
-      const baselineManager = new BaselineManager(cwd);
-      const history = new HistoryManager(cwd);
+    .option("-c, --config <file>", "Path to configuration file")
+    .action(
+      async (
+        action = "show",
+        runId?: string,
+        options: { config?: string } = {},
+      ) => {
+        const cwd = process.cwd();
+        const configOpt = options.config || program.opts().config;
+        const configPath = configOpt ? path.resolve(cwd, configOpt) : undefined;
+        const projectDir = configPath ? path.dirname(configPath) : cwd;
 
-      if (action === "clear") {
-        const bp = path.join(cwd, ".eval", "baseline.json");
-        if (fs.existsSync(bp)) {
-          fs.unlinkSync(bp);
-          console.log(pc.green("\n✓ Baseline cleared.\n"));
-        } else {
-          console.log(pc.dim("\nNo baseline found to clear.\n"));
+        const baselineManager = new BaselineManager(projectDir);
+        const history = new HistoryManager(projectDir);
+
+        if (action === "clear") {
+          const bp = path.join(projectDir, ".eval", "baseline.json");
+          if (fs.existsSync(bp)) {
+            fs.unlinkSync(bp);
+            console.log(pc.green("\n✓ Baseline cleared.\n"));
+          } else {
+            console.log(pc.dim("\nNo baseline found to clear.\n"));
+          }
+          return;
         }
-        return;
-      }
 
-      if (action === "set") {
-        const targetRunId = runId || "latest";
-        const run = history.getRun(targetRunId);
-        if (!run) {
-          console.error(
-            pc.red(`\nRun "${targetRunId}" not found in history.\n`),
+        if (action === "set") {
+          const targetRunId = runId || "latest";
+          const run = history.getRun(targetRunId);
+          if (!run) {
+            console.error(
+              pc.red(`\nRun "${targetRunId}" not found in history.\n`),
+            );
+            process.exit(2);
+          }
+          baselineManager.saveBaseline(run);
+          console.log(
+            pc.green(
+              `\n✓ Established baseline from run ${run.id} (${(run.overallScore * 100).toFixed(1)}%)\n`,
+            ),
           );
-          process.exit(2);
+          return;
         }
-        baselineManager.saveBaseline(run);
-        console.log(
-          pc.green(
-            `\n✓ Established baseline from run ${run.id} (${(run.overallScore * 100).toFixed(1)}%)\n`,
-          ),
-        );
-        return;
-      }
 
-      // Default: show baseline
-      const current = baselineManager.getBaseline();
-      if (!current) {
-        console.log(
-          pc.yellow(
-            "\nNo baseline established yet. Run `ai-eval baseline set` or `ai-eval test --update-baseline`.\n",
-          ),
-        );
-        return;
-      }
+        // Default: show baseline
+        const current = baselineManager.getBaseline();
+        if (!current) {
+          console.log(
+            pc.yellow(
+              "\nNo baseline established yet. Run `ai-eval baseline set` or `ai-eval test --update-baseline`.\n",
+            ),
+          );
+          return;
+        }
 
-      console.log(pc.bold(pc.cyan("\nCurrent AI Baseline:")));
-      console.log(
-        pc.dim("----------------------------------------------------"),
-      );
-      console.log(`ID:           ${current.id}`);
-      console.log(`Evaluation:   ${current.evaluationName}`);
-      console.log(`Timestamp:    ${new Date(current.timestamp).toUTCString()}`);
-      console.log(
-        `Score:        ${pc.green(`${(current.overallScore * 100).toFixed(1)}%`)}`,
-      );
-      console.log(
-        `Cases:        ${current.passedCases}/${current.totalCases} passed`,
-      );
-      console.log(
-        `Avg Latency:  ${current.latencyStats.avgMs}ms (p95: ${current.latencyStats.p95Ms}ms)`,
-      );
-      console.log(`Total Cost:   $${current.totalCost.toFixed(4)}\n`);
-    });
+        console.log(pc.bold(pc.cyan("\nCurrent AI Baseline:")));
+        console.log(
+          pc.dim("----------------------------------------------------"),
+        );
+        console.log(`ID:           ${current.id}`);
+        console.log(`Evaluation:   ${current.evaluationName}`);
+        console.log(
+          `Timestamp:    ${new Date(current.timestamp).toUTCString()}`,
+        );
+        console.log(
+          `Score:        ${pc.green(`${(current.overallScore * 100).toFixed(1)}%`)}`,
+        );
+        console.log(
+          `Cases:        ${current.passedCases}/${current.totalCases} passed`,
+        );
+        console.log(
+          `Avg Latency:  ${current.latencyStats.avgMs}ms (p95: ${current.latencyStats.p95Ms}ms)`,
+        );
+        console.log(`Total Cost:   $${current.totalCost.toFixed(4)}\n`);
+      },
+    );
 
   // ----------------------------------------------------
   // ai-eval compare
@@ -792,15 +816,25 @@ export default {
     )
     .option("--output <file>", "Write diff output to specified file")
     .option("--ci", "Exit with code 1 if any regression is detected")
+    .option("-c, --config <file>", "Path to configuration file")
     .action(
       async (
         run1: string,
         run2: string,
-        options: { format?: string; output?: string; ci?: boolean },
+        options: {
+          format?: string;
+          output?: string;
+          ci?: boolean;
+          config?: string;
+        },
       ) => {
         const cwd = process.cwd();
-        const history = new HistoryManager(cwd);
-        const baselineManager = new BaselineManager(cwd);
+        const configOpt = options.config || program.opts().config;
+        const configPath = configOpt ? path.resolve(cwd, configOpt) : undefined;
+        const projectDir = configPath ? path.dirname(configPath) : cwd;
+
+        const history = new HistoryManager(projectDir);
+        const baselineManager = new BaselineManager(projectDir);
 
         const resolveRun = (id: string) => {
           if (id === "baseline") return baselineManager.getBaseline();
