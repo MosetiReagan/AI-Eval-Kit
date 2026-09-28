@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { Command } from "commander";
 import pc from "picocolors";
 import {
@@ -374,7 +375,16 @@ export default {
               .digest("hex")
               .slice(0, 12);
             targetVersion = codeHash;
-            const imported = await import(`file://${targetPath}?h=${codeHash}`);
+            const targetUrl = `${pathToFileURL(targetPath).href}?h=${codeHash}`;
+            const isTypeScript = /\.[cm]?tsx?$/i.test(targetPath);
+            // Node cannot import TypeScript directly, so route .ts targets
+            // through tsx's loader. Plain JS keeps the native import path.
+            const imported = isTypeScript
+              ? await (await import("tsx/esm/api")).tsImport(
+                  targetUrl,
+                  pathToFileURL(path.join(projectDir, "index.js")).href,
+                )
+              : await import(targetUrl);
             const mod = imported.default || imported;
             target = defineTarget(
               `${mod.name || evalSpec.name}:${codeHash}`,
